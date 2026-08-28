@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Lecture notes CNI Summer School 2026">
+
+<title>5&nbsp; State abstraction – Model approximation in MDPs and POMDPs</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../lectures/sample-path-bounds.html" rel="next">
+<link href="../lectures/model-approximation.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-610e5c2789cf4792c2c6ad2d8bcb67e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+// https://github.com/mathjax/MathJax/issues/2744#issuecomment-1658624747
+// To fix the bug that uppercase unicode letters are shown in italic
+window.MathJax = {
+  loader: {
+    load: ['[tex]/mathtools']
+  },
+  startup: {
+    ready() {
+      const {RANGES} = MathJax._.core.MmlTree.OperatorDictionary;
+      const {TEXCLASS} = MathJax._.core.MmlTree.MmlNode;
+      RANGES.splice(4, 1,
+        [0x0370, 0x0385, TEXCLASS.ORD, 'mi'],
+        [0x0386, 0x3AB, TEXCLASS.ORD, 'mi', 'normal'],
+        [0x03AC, 0x1A20, TEXCLASS.ORD, 'mi']
+      );
+      MathJax.startup.defaultReady();
+    }
+  },
+  tex: {
+    packages: {'[+]': ['mathtools']},
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+    processEscapes: true,
+    tags: "ams",
+    macros: {
+      PR: "\\mathbb{P}",
+      EXP: "\\mathbb{E}",
+      LEXP: "\\mathbb{L}",
+      "VAR": "\\operatorname{var}",
+      COV: "\\operatorname{cov}",
+      IND: "\\mathbb{1}",
+      ONES: "\\mathbf{1}",
+      reals: "\\mathbb{R}",
+      integers: "\\mathbb{Z}",
+      naturalnumbers: "\\mathbb{N}",
+      BLANK: "\\mathfrak{E}",
+      TRANS: "\\intercal",
+      BELLMAN: "\\mathcal{B}",
+      ENV: "\\mathcal{E}",
+      DYNAMICS: "\\mathcal{P}",
+      ADVANTAGE: "\\mathcal{A}",
+      RICCATI: "\\mathcal{R}",
+      GAIN: "\\mathcal{G}",
+      GREEDY: "\\mathcal{G}",
+      MISMATCH: "\\mathcal{D}",
+      VEC: "\\operatorname{vec}",
+      diag: "\\operatorname{diag}",
+      ROWS: "\\operatorname{vec}",
+      TR: "\\operatorname{Tr}",   
+      SPAN: "\\operatorname{sp}",   
+      DRE: "\\operatorname{DRE}",   
+      DARE: "\\operatorname{DARE}",   
+      LQR: "\\operatorname{LQR}",   
+      ALPHABET: ["\\mathcal{#1}", 1],
+      MATRIX: ["\\begin{bmatrix} #1 \\end{bmatrix}", 1],
+      NORM: ["\\left\\lVert \\mathstrut #1 \\right\\rVert", 1],
+      ABS: ["\\left\\lvert \\mathstrut #1 \\right\\rvert", 1],
+      SIZE: ["\\left\\lvert \\mathstrut \\ALPHABET #1 \\right\\rvert", 1],
+      GRAD: "\\nabla",
+      IP: ["\\left\\langle #1, #2 \\right\\rangle", 2]
+    },
+  },
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  },
+};
+</script>
+<script async="" data-id="101261731" src="//static.getclicky.com/js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../lectures/local.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../lectures/state-abstraction.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">State abstraction</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Model approximation in MDPs and POMDPs</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course outline</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/static-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/dynamic-programming.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/MDP-properties.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Properties of value functions</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/model-approximation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Model approximation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/state-abstraction.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">State abstraction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/sample-path-bounds.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sample-path bounds</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/pomdps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">POMDPs and information states</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/ais.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Approximate Information States</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/certainty-equivalence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Certainty equivalence in POMDPs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">From approximation bounds to learning</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#motivation" id="toc-motivation" class="nav-link active" data-scroll-target="#motivation"><span class="header-section-number">5.1</span> Motivation</a></li>
+  <li><a href="#model-approximation-take-2" id="toc-model-approximation-take-2" class="nav-link" data-scroll-target="#model-approximation-take-2"><span class="header-section-number">5.2</span> Model approximation (Take 2)</a>
+  <ul class="collapse">
+  <li><a href="#mismatch-operator" id="toc-mismatch-operator" class="nav-link" data-scroll-target="#mismatch-operator"><span class="header-section-number">5.2.1</span> Mismatch operator</a></li>
+  <li><a href="#policy-error" id="toc-policy-error" class="nav-link" data-scroll-target="#policy-error"><span class="header-section-number">5.2.2</span> Policy error</a></li>
+  <li><a href="#value-error" id="toc-value-error" class="nav-link" data-scroll-target="#value-error"><span class="header-section-number">5.2.3</span> Value error</a></li>
+  <li><a href="#model-approximation-error" id="toc-model-approximation-error" class="nav-link" data-scroll-target="#model-approximation-error"><span class="header-section-number">5.2.4</span> Model approximation error</a></li>
+  </ul></li>
+  <li><a href="#ipm-based-bounds-on-model-approximation-error" id="toc-ipm-based-bounds-on-model-approximation-error" class="nav-link" data-scroll-target="#ipm-based-bounds-on-model-approximation-error"><span class="header-section-number">5.3</span> IPM-based bounds on model approximation error</a></li>
+  <li><a href="#exm-state-quantization" id="toc-exm-state-quantization" class="nav-link" data-scroll-target="#exm-state-quantization"><span class="header-section-number">5.4</span> Example: State quantization</a>
+  <ul class="collapse">
+  <li><a href="#cost-and-dynamics-errors" id="toc-cost-and-dynamics-errors" class="nav-link" data-scroll-target="#cost-and-dynamics-errors"><span class="header-section-number">5.4.1</span> Cost and dynamics errors</a></li>
+  <li><a href="#approximation-bound" id="toc-approximation-bound" class="nav-link" data-scroll-target="#approximation-bound"><span class="header-section-number">5.4.2</span> Approximation bound</a></li>
+  </ul></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">State abstraction</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="motivation" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="motivation"><span class="header-section-number">5.1</span> Motivation</h2>
+<p>In the previous lecture, we showed how to obtain model approximation bounds when the true model and the approximate model have the same state space. In this lecture, we consider the setting where the state spaces are not equal.</p>
+<p>In particular, consider a model <span class="math inline">\(\ALPHABET M = \langle \ALPHABET S, \ALPHABET A, P, c, T \rangle\)</span> and an approximate model <span class="math inline">\(\widehat {\ALPHABET M} = \langle \hat {\ALPHABET S}, \ALPHABET A, \hat P, \hat c, T \rangle\)</span>. We assume that we are given a surjective state abstraction function <span class="math inline">\(φ \colon \ALPHABET S \to \hat {\ALPHABET S}\)</span>.</p>
+<p>We can use <span class="math inline">\(φ\)</span> to <strong>lift</strong><a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> any function <span class="math inline">\(\hat f\)</span> defined on <span class="math inline">\(\hat {\ALPHABET S}\)</span> to a function defined on <span class="math inline">\(\ALPHABET S\)</span> given by <span class="math inline">\(f = \hat f \circ φ\)</span>, i.e., <span class="math display">\[f(s) = \hat f(φ(s)), \quad \forall s \in \ALPHABET  S.\]</span> An immediate consequence of the definition of the sup-norm is that the lifting operation is non-expansive.</p>
+<div id="lem-lift" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 5.1</strong></span> For any functions <span class="math inline">\(\hat f_1, \hat f_2 \colon \hat {\ALPHABET S} \to \reals\)</span>, <span class="math display">\[ \NORM{ \hat f_1 \circ φ - \hat f_2 \circ φ }_{∞} \le
+    \NORM{ \hat f_1 - \hat f_2 }_{∞}. \]</span></p>
+</div>
+<p>As before, let <span class="math inline">\(\{V^\star_t\}_{t=1}^T\)</span> and <span class="math inline">\(\{\hat V^\star_t\}_{t =1}^T\)</span> denote the optimal value functions of the true model <span class="math inline">\(\ALPHABET M\)</span> and the approximate model <span class="math inline">\(\widehat {\ALPHABET M}\)</span>, respectively. Moreover, let <span class="math inline">\(π^\star = (π^\star_1, \dots, π^\star_T)\)</span> and <span class="math inline">\(\hat π^\star = (\hat π^\star_1, \dots, \hat π^\star_T)\)</span> be optimal policies for the true model <span class="math inline">\(\ALPHABET M\)</span> and the approximate model <span class="math inline">\(\widehat {\ALPHABET M}\)</span>, respectively.</p>
+<p>Any policy <span class="math inline">\(\hat π = (\hat π_1, \dots, \hat π_T)\)</span> on <span class="math inline">\(\widehat {\ALPHABET M}\)</span> can be lifted to a policy on <span class="math inline">\(\ALPHABET M\)</span> by setting <span class="math inline">\(π_t = \hat π_t \circ φ\)</span> for all <span class="math inline">\(t\)</span>. We write this lifted policy as <span class="math inline">\(\hat π \circ φ\)</span>.</p>
+<p>We are interested in the following questions:</p>
+<ol type="1">
+<li><p><strong>Policy error bounds:</strong> Given a policy <span class="math inline">\(\hat π = (\hat π_1, \dots, \hat π_T)\)</span> for <span class="math inline">\(\widehat {\ALPHABET M}\)</span>, what is the error if <span class="math inline">\(\hat V^{\hat π}_t \circ φ\)</span> is used as an approximation for <span class="math inline">\(V^{\hat π \circ φ}_t\)</span> (or equivalently, if <span class="math inline">\(\hat Q^{\hat π}_t \circ φ\)</span> is used as an approximation for <span class="math inline">\(Q^{\hat π \circ φ}_t\)</span>)?</p></li>
+<li><p><strong>Value error bounds:</strong> What is the error if <span class="math inline">\(\hat V^\star_t \circ φ\)</span> is used as an approximation for <span class="math inline">\(V^\star_t\)</span> (or equivalently, if <span class="math inline">\(\hat Q^\star_t \circ φ\)</span> is used as an approximation for <span class="math inline">\(Q^\star_t\)</span>)?</p></li>
+<li><p><strong>Model approximation error:</strong> What is the error if the policy <span class="math inline">\(\hat π^\star \circ φ\)</span> is used instead of the optimal policy <span class="math inline">\(π^\star\)</span>? Equivalently, how large is the gap between <span class="math inline">\((V^\star_t, Q^\star_t)\)</span> and <span class="math inline">\((V^{\hat π^\star \circ φ}_t, Q^{\hat π^\star \circ φ}_t)\)</span>?</p></li>
+</ol>
+</section>
+<section id="model-approximation-take-2" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="model-approximation-take-2"><span class="header-section-number">5.2</span> Model approximation (Take 2)</h2>
+<p>Let <span class="math inline">\(\ALPHABET V\)</span> and <span class="math inline">\(\ALPHABET Q\)</span> denote the space of value and action-value functions in model <span class="math inline">\(\ALPHABET M\)</span>, respectively. Similarly, let <span class="math inline">\(\hat {\ALPHABET V}\)</span> and <span class="math inline">\(\hat {\ALPHABET Q}\)</span> denote the space of value and action-value functions in model <span class="math inline">\(\widehat {\ALPHABET M}\)</span>. We will use <span class="math inline">\(\ENV_t \colon \ALPHABET V \to \ALPHABET Q\)</span> and <span class="math inline">\(\hat \ENV_t \colon \hat {\ALPHABET V} \to \hat {\ALPHABET Q}\)</span> to denote the environment operators in model <span class="math inline">\(\ALPHABET M\)</span> and <span class="math inline">\(\widehat {\ALPHABET M}\)</span>.</p>
+<section id="mismatch-operator" class="level3" data-number="5.2.1">
+<h3 data-number="5.2.1" class="anchored" data-anchor-id="mismatch-operator"><span class="header-section-number">5.2.1</span> Mismatch operator</h3>
+<p>Since <span class="math inline">\(\ALPHABET M\)</span> and <span class="math inline">\(\widehat {\ALPHABET M}\)</span> are defined on different state spaces, we need to modify the definition of the mismatch operator. Define the <strong>mismatch operator</strong> <span class="math inline">\(\hat \MISMATCH_t \colon \hat {\ALPHABET V} \to \ALPHABET Q\)</span> as follows: for any <span class="math inline">\(\hat v \in \hat {\ALPHABET V}\)</span>, <span class="math display">\[
+  \hat \MISMATCH_t \hat v = \ENV_t (\hat v \circ φ) - (\hat \ENV_t \hat v) \circ φ,
+\]</span> where <span class="math inline">\((\hat q \circ φ)(s,a) \coloneqq \hat q(φ(s),a)\)</span> for any <span class="math inline">\(\hat q \in \hat {\ALPHABET Q}\)</span>.</p>
+<p>Then, we have the following one-step estimate.</p>
+<div id="lem-one-step-abstract" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 5.2 (One step error propagation)</strong></span> Given <span class="math inline">\(v_{t+1} \in \ALPHABET V\)</span> and <span class="math inline">\(\hat v_{t+1} \in \hat {\ALPHABET V}\)</span>, define <span class="math inline">\(q_t = \ENV_t v_{t+1}\)</span> and <span class="math inline">\(\hat q_t = \hat \ENV_t \hat v_{t+1}\)</span>. Then, <span class="math display">\[
+  \NORM{q_{t} - \hat q_t \circ φ} \le \NORM{\hat \MISMATCH_t \hat v_{t+1}}
+    + \NORM{v_{t+1} - \hat v_{t+1} \circ φ}
+\]</span> where <span class="math inline">\((\hat q_t \circ φ)(s,a) \coloneqq \hat q_t(φ(s),a)\)</span>.</p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>Consider <span class="math display">\[\begin{align*}
+  \NORM{q_{t} - \hat q_t \circ φ} &amp;= \NORM{\ENV_t v_{t+1}  - (\hat \ENV_t \hat v_{t+1}) \circ φ } \\
+  &amp;\stackrel{(a)}\le \NORM{\ENV_t (\hat v_{t+1} \circ φ) - (\hat \ENV_t \hat v_{t+1}) \circ φ}
+  + \NORM{\ENV_t v_{t+1} - \ENV_t (\hat v_{t+1} \circ φ) }  \\
+  &amp;\stackrel{(b)}\le \NORM{\hat \MISMATCH_t \hat v_{t+1}} + \NORM{v_{t+1} - \hat v_{t+1} \circ φ},
+\end{align*}\]</span> where <span class="math inline">\((a)\)</span> follows from the triangle inequality and <span class="math inline">\((b)\)</span> uses the definition of <span class="math inline">\(\hat \MISMATCH_t\)</span> and the non-expansion of <span class="math inline">\(\ENV_t\)</span> from <a href="model-approximation.html#lem-non-expansion" class="quarto-xref">Lemma&nbsp;<span>4.1</span></a>.</p>
+</div>
+</div>
+</div>
+<p>The mismatch operator can be used to bound the difference between evaluating a lifted policy in the true model and evaluating the corresponding policy in the approximate model.</p>
+</section>
+<section id="policy-error" class="level3" data-number="5.2.2">
+<h3 data-number="5.2.2" class="anchored" data-anchor-id="policy-error"><span class="header-section-number">5.2.2</span> Policy error</h3>
+<div id="prp-policy-error-abstract" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 5.1 (Policy error)</strong></span> For any policy <span class="math inline">\(\hat π = (\hat π_1, \dots, \hat π_T)\)</span> on <span class="math inline">\(\widehat {\ALPHABET M}\)</span>, define the policy errors <span class="math display">\[
+  α^{\hat π}_t
+  \coloneqq \NORM{V^{\hat π \circ φ}_t - \hat V^{\hat π}_t \circ φ},
+  \qquad
+  β^{\hat π}_t
+  \coloneqq \NORM{Q^{\hat π \circ φ}_t - \hat Q^{\hat π}_t \circ φ}.
+\]</span> Then, for any <span class="math inline">\(t \in \{1,\dots,T\}\)</span>, <span class="math display">\[
+  α^{\hat π}_t
+  \le β^{\hat π}_t
+  \le \sum_{\tau=t}^T Δ^{\hat π}_\tau,
+\]</span> where <span class="math display">\[
+  Δ^{\hat π}_t =
+  \NORM{\hat \MISMATCH_t \hat V^{\hat π}_{t+1}}.
+\]</span></p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-2" class="callout-2-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>We prove the claim by backward induction on <span class="math inline">\(t\)</span>.</p>
+<p><strong>Base case (<span class="math inline">\(t = T+1\)</span>).</strong> The result holds trivially as <span class="math inline">\(V^{\hat π \circ φ}_{T+1} = \hat V^{\hat π}_{T+1} = 0\)</span>, so <span class="math inline">\(α^{\hat π}_{T+1} = 0\)</span>.</p>
+<p><strong>Induction step.</strong> Fix <span class="math inline">\(t \in \{1,\dots,T\}\)</span> and assume the claim holds at time <span class="math inline">\(t+1\)</span>, i.e. <span class="math display">\[
+  α^{\hat π}_{t+1} \le \sum_{\tau=t+1}^{T} Δ^{\hat π}_\tau.
+\]</span> Recall that <span class="math display">\[
+  Q^{\hat π \circ φ}_t = \ENV_t V^{\hat π \circ φ}_{t+1}, \quad
+  \hat Q^{\hat π}_t = \hat \ENV_t \hat V^{\hat π}_{t+1},
+\]</span> and <span class="math display">\[
+  V^{\hat π \circ φ}_t = \ALPHABET T^{\hat π_t \circ φ} Q^{\hat π \circ φ}_t,
+  \quad
+  \hat V^{\hat π}_t = \ALPHABET T^{\hat π_t} \hat Q^{\hat π}_t.
+\]</span> Observe that <span class="math display">\[
+  (\hat V^{\hat π}_t \circ φ)
+  = \bigl(\ALPHABET T^{\hat π_t} \hat Q^{\hat π}_t\bigr) \circ φ
+  = \ALPHABET T^{\hat π_t \circ φ} (\hat Q^{\hat π}_t \circ φ).
+\]</span> From the one-step lemma we get: <span class="math display">\[
+  β^{\hat π}_t
+  = \NORM{Q^{\hat π \circ φ}_t - \hat Q^{\hat π}_t \circ φ}
+  \le Δ^{\hat π}_t + α^{\hat π}_{t+1}
+  \le \sum_{\tau=t}^{T} Δ^{\hat π}_\tau.
+\]</span> Now, using the non-expansion of <span class="math inline">\(\ALPHABET T^{\hat π_t \circ φ}\)</span> we get: <span class="math display">\[
+  α^{\hat π}_t
+  = \NORM{V^{\hat π \circ φ}_t - \hat V^{\hat π}_t \circ φ}
+  \le β^{\hat π}_t
+  \le \sum_{\tau=t}^{T} Δ^{\hat π}_\tau,
+\]</span> where the last step uses the induction hypothesis. This establishes the claim at time <span class="math inline">\(t\)</span>.</p>
+<p>By backward induction, the bound holds for all <span class="math inline">\(t \in \{1,\dots,T\}\)</span>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="value-error" class="level3" data-number="5.2.3">
+<h3 data-number="5.2.3" class="anchored" data-anchor-id="value-error"><span class="header-section-number">5.2.3</span> Value error</h3>
+<p>Similar to the above, we can also bound the difference between the optimal value function of the true model and the lift of the optimal value function of the approximate model.</p>
+<div id="prp-value-error-abstract" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 5.2 (Value error)</strong></span> Define the value errors <span class="math display">\[
+  α^\star_t
+  \coloneqq \NORM{V^\star_t - \hat V^\star_t \circ φ},
+  \qquad
+  β^\star_t
+  \coloneqq \NORM{Q^\star_t - \hat Q^\star_t \circ φ}.
+\]</span> Then, for any <span class="math inline">\(t \in \{1,\dots,T\}\)</span>, <span class="math display">\[
+  α^\star_t
+  \le β^\star_t
+  \le \sum_{\tau=t}^T Δ^\star_\tau,
+\]</span> where <span class="math display">\[
+  Δ^\star_t =
+  \NORM{\hat \MISMATCH_t \hat V^\star_{t+1}}.
+\]</span></p>
+</div>
+<p>The proof is similar to the proof of <a href="#prp-policy-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.1</span></a>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>We prove the claim by backward induction on <span class="math inline">\(t\)</span>.</p>
+<p><strong>Base case (<span class="math inline">\(t = T+1\)</span>).</strong> The result holds trivially as <span class="math inline">\(V^\star_{T+1} = \hat V^\star_{T+1} = 0\)</span>, so <span class="math inline">\(α^\star_{T+1} = 0\)</span>.</p>
+<p><strong>Induction step.</strong> Fix <span class="math inline">\(t \in \{1,\dots,T\}\)</span> and assume the claim holds at time <span class="math inline">\(t+1\)</span>, i.e. <span class="math display">\[
+  α^\star_{t+1} \le \sum_{\tau=t+1}^{T} Δ^\star_\tau.
+\]</span> Recall that <span class="math display">\[
+  Q^\star_t = \ENV_t V^\star_{t+1}, \quad
+  \hat Q^\star_t = \hat \ENV_t \hat V^\star_{t+1},
+\]</span> and <span class="math display">\[
+  V^\star_t = \ALPHABET T^\star Q^\star_t,
+  \quad
+  \hat V^\star_t = \ALPHABET T^\star \hat Q^\star_t.
+\]</span> Observe that <span class="math display">\[
+  (\hat V^\star_t \circ φ)
+  = \bigl(\ALPHABET T^\star \hat Q^\star_t\bigr) \circ φ
+  = \ALPHABET T^\star (\hat Q^\star_t \circ φ).
+\]</span> From the one-step lemma we get: <span class="math display">\[
+  β^\star_t
+  = \NORM{Q^\star_t - \hat Q^\star_t \circ φ}
+  \le Δ^\star_t + α^\star_{t+1}
+  \le \sum_{\tau=t}^{T} Δ^\star_\tau.
+\]</span> Now, using the non-expansion of <span class="math inline">\(\ALPHABET T^\star\)</span> we get: <span class="math display">\[
+  α^\star_t
+  = \NORM{V^\star_t - \hat V^\star_t \circ φ}
+  \le β^\star_t
+  \le \sum_{\tau=t}^{T} Δ^\star_\tau,
+\]</span> where the last step uses the induction hypothesis. This establishes the claim at time <span class="math inline">\(t\)</span>.</p>
+<p>By backward induction, the bound holds for all <span class="math inline">\(t \in \{1,\dots,T\}\)</span>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="model-approximation-error" class="level3" data-number="5.2.4">
+<h3 data-number="5.2.4" class="anchored" data-anchor-id="model-approximation-error"><span class="header-section-number">5.2.4</span> Model approximation error</h3>
+<p>To bound the model approximation error, observe that <span class="math display">\[\begin{align} \label{eq:triangle-model-error-abstract}
+  α_t
+  &amp;\coloneqq \NORM{V^\star_t - V^{\hat π^\star \circ φ}_t}
+  \le \NORM{V^\star_t - \hat V^{\hat π^\star}_t \circ φ}
+  + \NORM{V^{\hat π^\star \circ φ}_t - \hat V^{\hat π^\star}_t \circ φ}
+  \\
+  &amp;\stackrel{(a)}= α^\star_t
+  + α^{\hat π^\star}_t,
+\end{align}\]</span> where <span class="math inline">\((a)\)</span> uses that <span class="math inline">\(\hat π^\star\)</span> is optimal for the approximate model, so <span class="math inline">\(\hat V^{\hat π^\star} = \hat V^\star\)</span>, and <span class="math inline">\(α^\star_t\)</span>, <span class="math inline">\(α^{\hat π^\star}_t\)</span> are as in <a href="#prp-value-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.2</span></a> and <a href="#prp-policy-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.1</span></a>. The same triangle holds for the action-value gaps <span class="math inline">\(β_t\)</span>, <span class="math inline">\(β^\star_t\)</span>, and <span class="math inline">\(β^{\hat π^\star}_t\)</span>. The key point is that because <span class="math inline">\(\hat V^{\hat π^\star} = \hat V^\star\)</span>, the one-step model errors that appear in those bounds are the same.</p>
+<div id="thm-model-error-hat-V-star-abstract" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 5.1 (Model approximation error)</strong></span> Define the model approximation errors <span class="math display">\[
+  α_t
+  \coloneqq \NORM{V^\star_t - V^{\hat π^\star \circ φ}_t},
+  \qquad
+  β_t
+  \coloneqq \NORM{Q^\star_t - Q^{\hat π^\star \circ φ}_t}.
+\]</span> Then, for any <span class="math inline">\(t \in \{1,\dots,T\}\)</span>, <span class="math display">\[
+  α_t
+  \le β_t
+  \le β^\star_t + β^{\hat π^\star}_t
+  \le \sum_{\tau=t}^{T}
+  \bigl(
+    Δ^\star_\tau + Δ^{\hat π^\star}_\tau
+  \bigr)
+  = 2 \sum_{\tau=t}^{T} \NORM{\hat \MISMATCH_\tau \hat V^\star_{\tau+1}},
+\]</span> where <span class="math inline">\(β^\star_t\)</span>, <span class="math inline">\(β^{\hat π^\star}_t\)</span>, <span class="math inline">\(Δ^\star_t\)</span>, and <span class="math inline">\(Δ^{\hat π^\star}_t\)</span> are as in <a href="#prp-value-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.2</span></a> and <a href="#prp-policy-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.1</span></a>. In particular, <span class="math inline">\(\hat π^\star \circ φ\)</span> is <span class="math inline">\(α_t\)</span>-optimal for <span class="math inline">\(\ALPHABET M\)</span> at time <span class="math inline">\(t\)</span>.</p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>The inequality <span class="math inline">\(α_t \le β_t\)</span> follows as in <a href="model-approximation.html#thm-model-error-hat-V-star" class="quarto-xref">Theorem&nbsp;<span>4.1</span></a>. Using <span class="math inline">\(\hat Q^{\hat π^\star}_t = \hat Q^\star_t\)</span>, <span class="math display">\[
+  β_t
+  = \NORM{Q^\star_t - Q^{\hat π^\star \circ φ}_t}
+  \le \NORM{Q^\star_t - \hat Q^\star_t \circ φ}
+  + \NORM{Q^{\hat π^\star \circ φ}_t - \hat Q^{\hat π^\star}_t \circ φ}
+  = β^\star_t + β^{\hat π^\star}_t.
+\]</span> <a href="#prp-value-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.2</span></a> and <a href="#prp-policy-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.1</span></a> then give <span class="math display">\[
+  β^\star_t + β^{\hat π^\star}_t
+  \le \sum_{\tau=t}^{T} Δ^\star_\tau
+  + \sum_{\tau=t}^{T} Δ^{\hat π^\star}_\tau.
+\]</span> Since <span class="math inline">\(\hat V^{\hat π^\star}_{\tau+1} = \hat V^\star_{\tau+1}\)</span>, we have <span class="math inline">\(Δ^\star_\tau = Δ^{\hat π^\star}_\tau = \NORM{\hat \MISMATCH_\tau \hat V^\star_{\tau+1}}\)</span>, and the claimed bound follows.</p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="ipm-based-bounds-on-model-approximation-error" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="ipm-based-bounds-on-model-approximation-error"><span class="header-section-number">5.3</span> IPM-based bounds on model approximation error</h2>
+<p>The above bounds require computing <span class="math inline">\(\hat V^\star_t\)</span> and being able to evaluate <span class="math inline">\(\hat \MISMATCH_t \hat V^\star_{t+1}\)</span>. As in the previous lecture, it is often more convenient to express the guarantees in terms of an explicit distance between the models <span class="math inline">\((P,c)\)</span> and <span class="math inline">\((\hat P,\hat c)\)</span>.</p>
+<p>We use the same IPM setup as before. Let <span class="math inline">\(\def\F{\mathfrak{F}}\F\)</span> be a convex and balanced set of functions, and write <span class="math inline">\(d_{\F}\)</span> for the corresponding IPM and <span class="math inline">\(ρ_{\F}\)</span> for its Minkowski functional. In particular, for any function <span class="math inline">\(f\)</span>, <span class="math display">\[\begin{equation}\label{eq:IPM-ineq-abstract}
+  \left| \int f dν_1 - \int f dν_2 \right|
+  \le ρ_{\F}(f) d_{\F}(ν_1, ν_2).
+\end{equation}\]</span></p>
+<p>Because the models live on different state spaces, the natural one-step comparison is between a transition on <span class="math inline">\(\ALPHABET S\)</span> pushed forward through <span class="math inline">\(φ\)</span> and a transition on <span class="math inline">\(\hat {\ALPHABET S}\)</span>. Define the pushed-forward kernel <span class="math display">\[
+  P_{φ,t}(\hat s' \mid s,a)
+  \coloneqq P_t\bigl(φ^{-1}(\hat s') \mid s,a\bigr).
+\]</span></p>
+<div id="def-model-distance-abstract" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 5.1 (Model distance under state abstraction)</strong></span> Given a function class <span class="math inline">\(\F\)</span>, we say that <span class="math inline">\(\widehat{\ALPHABET M}\)</span> is an <span class="math inline">\((ε_φ,\hat δ_φ)\)</span>-approximation of <span class="math inline">\(\ALPHABET M\)</span> with respect to <span class="math inline">\(φ\)</span>, where <span class="math inline">\(ε_φ = (ε_{φ,1},\dots,ε_{φ,T})\)</span> and <span class="math inline">\(\hat δ_φ = (\hat δ_{φ,1},\dots,\hat δ_{φ,T})\)</span>, if for every time <span class="math inline">\(t\)</span> and all <span class="math inline">\((s,a) \in \ALPHABET S \times \ALPHABET A\)</span>,</p>
+<ol type="1">
+<li><span class="math inline">\(\ABS{c_t(s,a) - \hat c_t(φ(s),a)} \le ε_{φ,t}\)</span>;</li>
+<li><span class="math inline">\(d_{\F}\bigl(P_{φ,t}(\cdot \mid s,a), \hat P_t(\cdot \mid φ(s),a)\bigr) \le \hat δ_{φ,t}\)</span>.</li>
+</ol>
+</div>
+<p>Equivalently, for any two models we may take <span class="math display">\[
+  ε_{φ,t}
+  = \sup_{(s,a) \in \ALPHABET S \times \ALPHABET A}
+  \ABS{c_t(s,a) - \hat c_t(φ(s),a)}
+\]</span> and <span class="math display">\[
+  \hat δ_{φ,t}
+  = \sup_{(s,a) \in \ALPHABET S \times \ALPHABET A}
+  d_{\F}\bigl(P_{φ,t}(\cdot \mid s,a), \hat P_t(\cdot \mid φ(s),a)\bigr).
+\]</span></p>
+<p>An immediate implication is a one-step bound on the mismatch operator.</p>
+<div id="lem-IPM-bound-on-mismatch-abstract" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 5.3 (IPM bound on mismatch)</strong></span> If <span class="math inline">\(\widehat{\ALPHABET M}\)</span> is an <span class="math inline">\((ε_φ,\hat δ_φ)\)</span>-approximation of <span class="math inline">\(\ALPHABET M\)</span> with respect to <span class="math inline">\(φ\)</span> and <span class="math inline">\(\F\)</span>, then for any time <span class="math inline">\(t\)</span> and any <span class="math inline">\(\hat v \colon \hat {\ALPHABET S} \to \reals\)</span>, <span class="math display">\[
+  \NORM{\hat \MISMATCH_t \hat v} \le ε_{φ,t} + \hat δ_{φ,t} ρ_{\F}(\hat v).
+\]</span></p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>From the definition of the mismatch operator, <span class="math display">\[\begin{align*}
+  \NORM{\hat \MISMATCH_t \hat v}
+  &amp;= \max_{(s,a) \in \ALPHABET S \times \ALPHABET A}
+  \biggl\lvert
+    c_t(s,a) + \sum_{s' \in \ALPHABET S} P_t(s' \mid s,a)\hat v(φ(s'))
+    \\
+    &amp;\hskip 4em
+    - \hat c_t(φ(s),a) - \sum_{\hat s' \in \hat {\ALPHABET S}} \hat P_t(\hat s' \mid φ(s),a)\hat v(\hat s')
+  \biggr\rvert
+  \\
+  &amp;\le \max_{(s,a) \in \ALPHABET S \times \ALPHABET A}
+  \biggl\{
+    \ABS{c_t(s,a) - \hat c_t(φ(s),a)}
+    \\
+    &amp;\hskip 4em
+    + \biggl\lvert
+      \sum_{\hat s' \in \hat {\ALPHABET S}} P_{φ,t}(\hat s' \mid s,a)\hat v(\hat s')
+      - \sum_{\hat s' \in \hat {\ALPHABET S}} \hat P_t(\hat s' \mid φ(s),a)\hat v(\hat s')
+    \biggr\rvert
+  \biggr\}
+  \\
+  &amp;\le \max_{(s,a) \in \ALPHABET S \times \ALPHABET A}
+  \Bigl\{
+    \ABS{c_t(s,a) - \hat c_t(φ(s),a)}
+    + ρ_{\F}(\hat v)
+    d_{\F}\bigl(P_{φ,t}(\cdot \mid s,a), \hat P_t(\cdot \mid φ(s),a)\bigr)
+  \Bigr\}
+  \\
+  &amp;\le ε_{φ,t} + \hat δ_{φ,t} ρ_{\F}(\hat v).
+\end{align*}\]</span> The second inequality uses <span class="math inline">\(\eqref{eq:IPM-ineq-abstract}\)</span>; the last inequality uses the <span class="math inline">\(t\)</span>-th component of the <span class="math inline">\((ε_φ,\hat δ_φ)\)</span>-approximation.</p>
+</div>
+</div>
+</div>
+<p>Combining <a href="#lem-IPM-bound-on-mismatch-abstract" class="quarto-xref">Lemma&nbsp;<span>5.3</span></a> with <a href="#thm-model-error-hat-V-star-abstract" class="quarto-xref">Theorem&nbsp;<span>5.1</span></a> gives an explicit model approximation bound in terms of the cost and transition errors.</p>
+<div id="thm-model-error-IPM-abstract" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 5.2 (Model approximation error via IPMs)</strong></span> Suppose that <span class="math inline">\(\widehat{\ALPHABET M}\)</span> is an <span class="math inline">\((ε_φ,\hat δ_φ)\)</span>-approximation of <span class="math inline">\(\ALPHABET M\)</span> with respect to <span class="math inline">\(φ\)</span>. Let <span class="math inline">\(α_t\)</span> and <span class="math inline">\(β_t\)</span> be as in <a href="#thm-model-error-hat-V-star-abstract" class="quarto-xref">Theorem&nbsp;<span>5.1</span></a>. Then, for any <span class="math inline">\(t \in \{1,\dots,T\}\)</span>, <span class="math display">\[
+  β_t
+  \le 2 \sum_{\tau=t}^{T}
+  \bigl[
+    ε_{φ,\tau} + \hat δ_{φ,\tau} ρ_{\F}(\hat V^\star_{\tau+1})
+  \bigr],
+\]</span> and <span class="math inline">\(α_t \le β_t\)</span>. In particular, <span class="math inline">\(\hat π^\star \circ φ\)</span> is <span class="math inline">\(α_t\)</span>-optimal for <span class="math inline">\(\ALPHABET M\)</span> at time <span class="math inline">\(t\)</span>.</p>
+</div>
+<p>Note that the above bound requires knowledge of <span class="math inline">\(\hat V^\star_t\)</span>. For specific choices of IPM, it is possible to obtain instance-independent upper bounds that do not require explicit knowledge of <span class="math inline">\(\hat V^\star_t\)</span>.</p>
+<div id="cor-model-error-instance-independent-abstract" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary 5.1 (Instance-independent model approximation bounds)</strong></span> &nbsp;</p>
+<ol type="1">
+<li><p>Suppose the approximation is with respect to total variation. Then <span class="math display">\[
+  α_t
+  \le 2 \sum_{\tau=t}^{T} ε_{φ,\tau}
+  + \sum_{\tau=t}^{T} \hat δ_{φ,\tau}
+  \sum_{k=\tau+1}^{T} \SPAN(\hat c_k).
+\]</span></p></li>
+<li><p>Suppose the approximation is with respect to Wasserstein distance. If the approximate model has Lipschitz constants <span class="math inline">\((\hat L^c_t, \hat L^P_t)\)</span>, define <span class="math inline">\(\hat L^V_{T+1}=0\)</span> and <span class="math display">\[
+  \hat L^V_t = \hat L^c_t + \hat L^P_t \hat L^V_{t+1}.
+\]</span> Then <span class="math display">\[
+  α_t
+  \le 2 \sum_{\tau=t}^{T}
+  \bigl[
+    ε_{φ,\tau} + \hat δ_{φ,\tau} \hat L^V_{\tau+1}
+  \bigr].
+\]</span></p></li>
+</ol>
+</div>
+</section>
+<section id="exm-state-quantization" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="exm-state-quantization"><span class="header-section-number">5.4</span> Example: State quantization</h2>
+<p>Consider a finite-horizon MDP <span class="math inline">\(\ALPHABET M = \langle \ALPHABET S, \ALPHABET A, P, c, T \rangle\)</span> whose state space <span class="math inline">\(\ALPHABET S\)</span> is a compact metric space (for example, a compact subset of a Euclidean space). If <span class="math inline">\(\ALPHABET S\)</span> is continuous, the dynamic programming recursion cannot be implemented exactly. The simplest approximation is to quantize the state space.</p>
+<p>Let <span class="math inline">\(\{\ALPHABET S_1,\dots,\ALPHABET S_n\}\)</span> be a partition of <span class="math inline">\(\ALPHABET S\)</span>, and for each cell pick a representative <span class="math inline">\(\hat s_i \in \ALPHABET S_i\)</span>. Write <span class="math inline">\(\hat {\ALPHABET S} = \{\hat s_1,\dots,\hat s_n\}\)</span> and define the quantization map <span class="math inline">\(φ \colon \ALPHABET S \to \hat {\ALPHABET S}\)</span> by sending every point of <span class="math inline">\(\ALPHABET S_i\)</span> to <span class="math inline">\(\hat s_i\)</span>. The associated <strong>quantization radius</strong> is <span class="math display">\[
+  r \coloneqq \sup_{s \in \ALPHABET S} d_{\ALPHABET S}\bigl(s, φ(s)\bigr).
+\]</span></p>
+<p>Define a finite-state approximate model <span class="math inline">\(\widehat{\ALPHABET M} = \langle \hat {\ALPHABET S}, \ALPHABET A, \hat P, \hat c, T \rangle\)</span> by restricting the cost to the grid and by lumping transitions into cells: for every <span class="math inline">\(\hat s_i,\hat s_j \in \hat {\ALPHABET S}\)</span> and <span class="math inline">\(a \in \ALPHABET A\)</span>, <span class="math display">\[
+  \hat c_t(\hat s_i,a) = c_t(\hat s_i,a),
+  \quad
+  \hat P_t(\hat s_j \mid \hat s_i,a) = P_t(\ALPHABET S_j \mid \hat s_i,a).
+\]</span></p>
+<div id="fig-quantization" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-quantization-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/state-quantization.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-quantization-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.1: State quantization. Adapted from <span class="citation" data-cites="Abbeel2019">Abbeel (<a href="#ref-Abbeel2019" role="doc-biblioref">2019</a>)</span>. The state space is partitioned into 12 cells. From <span class="math inline">\(\hat s_6\)</span>, four sample transitions fall into cells <span class="math inline">\(\ALPHABET S_7\)</span> and <span class="math inline">\(\ALPHABET S_{10}\)</span>; the quantized kernel lumps these into <span class="math inline">\(\hat P(\hat s_7 \mid \hat s_6,a)=q_1+q_2\)</span> and <span class="math inline">\(\hat P(\hat s_{10} \mid \hat s_6,a)=q_3+q_4\)</span>.
+</figcaption>
+</figure>
+</div>
+<p>This is exactly the state-abstraction setup of the present lecture: the approximate model lives on <span class="math inline">\(\hat {\ALPHABET S}\)</span>, and policies / value functions on <span class="math inline">\(\widehat{\ALPHABET M}\)</span> are lifted to <span class="math inline">\(\ALPHABET M\)</span> by composition with <span class="math inline">\(φ\)</span>. In particular, the policy of interest is <span class="math inline">\(\hat π^\star \circ φ\)</span>.</p>
+<section id="cost-and-dynamics-errors" class="level3" data-number="5.4.1">
+<h3 data-number="5.4.1" class="anchored" data-anchor-id="cost-and-dynamics-errors"><span class="header-section-number">5.4.1</span> Cost and dynamics errors</h3>
+<p>Assume that the true model is Lipschitz: there are constants <span class="math inline">\((L^c_t, L^P_t)\)</span> such that for all <span class="math inline">\(s,\tilde s \in \ALPHABET S\)</span> and <span class="math inline">\(a \in \ALPHABET A\)</span>, <span class="math display">\[
+  \ABS{c_t(s,a)-c_t(\tilde s,a)} \le L^c_t d_{\ALPHABET S}(s,\tilde s)
+\]</span> and <span class="math display">\[
+  W_1\bigl(P_t(\cdot \mid s,a), P_t(\cdot \mid \tilde s,a)\bigr)
+  \le L^P_t d_{\ALPHABET S}(s,\tilde s).
+\]</span> We metrize the grid <span class="math inline">\(\hat {\ALPHABET S}\)</span> with the same metric <span class="math inline">\(d_{\ALPHABET S}\)</span>. Recall that the pushed-forward kernel is <span class="math inline">\(P_{φ,t}(\hat s_j \mid s,a) = P_t(\ALPHABET S_j \mid s,a)\)</span>, and by construction <span class="math inline">\(\hat P_t(\cdot \mid φ(s),a) = P_{φ,t}(\cdot \mid φ(s),a)\)</span>. Thus <span class="math display">\[
+  \hat δ_{φ,t}
+  = \sup_{(s,a) \in \ALPHABET S \times \ALPHABET A}
+  W_1\bigl(
+    P_{φ,t}(\cdot \mid s,a),\,
+    P_{φ,t}(\cdot \mid φ(s),a)
+  \bigr).
+\]</span></p>
+<div id="lem-quantization-cost-dynamics" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 5.4 (Cost and dynamics errors under quantization)</strong></span> For every <span class="math inline">\(t\)</span>, <span class="math display">\[
+  ε_{φ,t} \le L^c_t r
+  \quad\text{and}\quad
+  \hat δ_{φ,t} \le (L^P_t + 2)\, r.
+\]</span></p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>For the cost, for every <span class="math inline">\((s,a)\)</span>, <span class="math display">\[
+  \ABS{c_t(s,a)-\hat c_t(φ(s),a)}
+  = \ABS{c_t(s,a)-c_t(φ(s),a)}
+  \le L^c_t d_{\ALPHABET S}\bigl(s, φ(s)\bigr)
+  \le L^c_t r.
+\]</span></p>
+<p>For the dynamics, fix <span class="math inline">\((s,a)\)</span> and write <span class="math inline">\(μ = P_t(\cdot \mid s,a)\)</span> and <span class="math inline">\(ν = P_t(\cdot \mid φ(s),a)\)</span>. Then <span class="math inline">\(P_{φ,t}(\cdot \mid s,a) = φ_\# μ\)</span> and <span class="math inline">\(P_{φ,t}(\cdot \mid φ(s),a) = φ_\# ν\)</span>. For any coupling <span class="math inline">\((X,Y)\)</span> of <span class="math inline">\((μ,ν)\)</span>, <span class="math display">\[\begin{align*}
+  \EXP\bigl[ d_{\ALPHABET S}\bigl(φ(X),φ(Y)\bigr) \bigr]
+  &amp;\le \EXP\bigl[ d_{\ALPHABET S}\bigl(φ(X),X\bigr) + d_{\ALPHABET S}(X,Y) + d_{\ALPHABET S}\bigl(Y,φ(Y)\bigr) \bigr]
+  \\
+  &amp;\le \EXP\bigl[ d_{\ALPHABET S}(X,Y) \bigr] + 2r.
+\end{align*}\]</span> Taking the optimal coupling yields <span class="math display">\[
+  W_1(φ_\# μ, φ_\# ν) \le W_1(μ,ν) + 2r \le (L^P_t + 2)\, r.
+\]</span> Taking the supremum over <span class="math inline">\((s,a)\)</span> completes the proof.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="approximation-bound" class="level3" data-number="5.4.2">
+<h3 data-number="5.4.2" class="anchored" data-anchor-id="approximation-bound"><span class="header-section-number">5.4.2</span> Approximation bound</h3>
+<p>Combining <a href="#lem-quantization-cost-dynamics" class="quarto-xref">Lemma&nbsp;<span>5.4</span></a> with the Wasserstein case of <a href="#cor-model-error-instance-independent-abstract" class="quarto-xref">Corollary&nbsp;<span>5.1</span></a>, the lifted quantized policy <span class="math inline">\(\hat π^\star \circ φ\)</span> is <span class="math inline">\(α_t\)</span>-optimal for <span class="math inline">\(\ALPHABET M\)</span> with <span class="math display">\[
+  α_t
+  \le 2 \sum_{\tau=t}^{T}
+  \bigl[
+    ε_{φ,\tau} + \hat δ_{φ,\tau} \hat L^V_{\tau+1}
+  \bigr]
+  \le 2r \sum_{\tau=t}^{T}
+  \bigl[
+    L^c_\tau + (L^P_\tau + 2)\hat L^V_{\tau+1}
+  \bigr],
+\]</span> where <span class="math inline">\(\hat L^V_t\)</span> are Lipschitz constants for <span class="math inline">\(\hat V^\star_t\)</span> on <span class="math inline">\((\hat {\ALPHABET S}, d_{\ALPHABET S})\)</span>.</p>
+<p>It remains only to control <span class="math inline">\(\hat L^V_t\)</span>. On the grid, the restricted cost is <span class="math inline">\(L^c_t\)</span>-Lipschitz. For the transitions, the same coupling argument gives, for any <span class="math inline">\(\hat s,\hat s' \in \hat {\ALPHABET S}\)</span>, <span class="math display">\[
+  W_1\bigl(\hat P_t(\cdot \mid \hat s,a), \hat P_t(\cdot \mid \hat s',a)\bigr)
+  \le L^P_t d_{\ALPHABET S}(\hat s,\hat s') + 2r.
+\]</span> Thus, if neighboring representatives are separated by at least <span class="math inline">\(d_{\min}\)</span>, a sufficient choice is <span class="math display">\[
+  \hat L^c_t = L^c_t,
+  \quad
+  \hat L^P_t = L^P_t + \frac{2r}{d_{\min}},
+\]</span> and <a href="MDP-properties.html#thm-value-lipschitz-bound" class="quarto-xref">Theorem&nbsp;<span>3.3</span></a> gives <span class="math inline">\(\hat L^V_{T+1}=0\)</span> with <span class="math display">\[
+  \hat L^V_t = \hat L^c_t + \hat L^P_t \hat L^V_{t+1}.
+\]</span> In the common case of a uniform grid with <span class="math inline">\(d_{\min} \asymp r\)</span>, the correction <span class="math inline">\(2r/d_{\min}\)</span> is <span class="math inline">\(\mathcal{O}(1)\)</span>, and the whole bound remains <span class="math inline">\(\mathcal{O}(r)\)</span>.</p>
+</section>
+</section>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-Abbeel2019" class="csl-entry" role="listitem">
+<span class="smallcaps">Abbeel, P.</span> 2019. Lecture notes for CS 287: Solving continuous <span>MDPs</span> with discretization. Available at: <a href="https://people.eecs.berkeley.edu/~pabbeel/cs287-fa19/slides/Lec3-discretization-of-continuous-state-space-MDPs.pdf">https://people.eecs.berkeley.edu/~pabbeel/cs287-fa19/slides/Lec3-discretization-of-continuous-state-space-MDPs.pdf</a>.
+</div>
+</div>
+</section>
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn1"><p>There is an analogous operation of <strong>projecting</strong> any function on <span class="math inline">\(\ALPHABET S\)</span> to a function of <span class="math inline">\(\hat {\ALPHABET S}\)</span>, but we won’t discuss that line of approximation here.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/adityam\.github\.io\/AIS-course\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../lectures/model-approximation.html" class="pagination-link" aria-label="Model approximation">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Model approximation</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../lectures/sample-path-bounds.html" class="pagination-link" aria-label="Sample-path bounds">
+        <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sample-path bounds</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

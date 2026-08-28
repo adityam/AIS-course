@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Lecture notes CNI Summer School 2026">
+
+<title>10&nbsp; From approximation bounds to learning – Model approximation in MDPs and POMDPs</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../lectures/certainty-equivalence.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-610e5c2789cf4792c2c6ad2d8bcb67e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+// https://github.com/mathjax/MathJax/issues/2744#issuecomment-1658624747
+// To fix the bug that uppercase unicode letters are shown in italic
+window.MathJax = {
+  loader: {
+    load: ['[tex]/mathtools']
+  },
+  startup: {
+    ready() {
+      const {RANGES} = MathJax._.core.MmlTree.OperatorDictionary;
+      const {TEXCLASS} = MathJax._.core.MmlTree.MmlNode;
+      RANGES.splice(4, 1,
+        [0x0370, 0x0385, TEXCLASS.ORD, 'mi'],
+        [0x0386, 0x3AB, TEXCLASS.ORD, 'mi', 'normal'],
+        [0x03AC, 0x1A20, TEXCLASS.ORD, 'mi']
+      );
+      MathJax.startup.defaultReady();
+    }
+  },
+  tex: {
+    packages: {'[+]': ['mathtools']},
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+    processEscapes: true,
+    tags: "ams",
+    macros: {
+      PR: "\\mathbb{P}",
+      EXP: "\\mathbb{E}",
+      LEXP: "\\mathbb{L}",
+      "VAR": "\\operatorname{var}",
+      COV: "\\operatorname{cov}",
+      IND: "\\mathbb{1}",
+      ONES: "\\mathbf{1}",
+      reals: "\\mathbb{R}",
+      integers: "\\mathbb{Z}",
+      naturalnumbers: "\\mathbb{N}",
+      BLANK: "\\mathfrak{E}",
+      TRANS: "\\intercal",
+      BELLMAN: "\\mathcal{B}",
+      ENV: "\\mathcal{E}",
+      DYNAMICS: "\\mathcal{P}",
+      ADVANTAGE: "\\mathcal{A}",
+      RICCATI: "\\mathcal{R}",
+      GAIN: "\\mathcal{G}",
+      GREEDY: "\\mathcal{G}",
+      MISMATCH: "\\mathcal{D}",
+      VEC: "\\operatorname{vec}",
+      diag: "\\operatorname{diag}",
+      ROWS: "\\operatorname{vec}",
+      TR: "\\operatorname{Tr}",   
+      SPAN: "\\operatorname{sp}",   
+      DRE: "\\operatorname{DRE}",   
+      DARE: "\\operatorname{DARE}",   
+      LQR: "\\operatorname{LQR}",   
+      ALPHABET: ["\\mathcal{#1}", 1],
+      MATRIX: ["\\begin{bmatrix} #1 \\end{bmatrix}", 1],
+      NORM: ["\\left\\lVert \\mathstrut #1 \\right\\rVert", 1],
+      ABS: ["\\left\\lvert \\mathstrut #1 \\right\\rvert", 1],
+      SIZE: ["\\left\\lvert \\mathstrut \\ALPHABET #1 \\right\\rvert", 1],
+      GRAD: "\\nabla",
+      IP: ["\\left\\langle #1, #2 \\right\\rangle", 2]
+    },
+  },
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  },
+};
+</script>
+<script async="" data-id="101261731" src="//static.getclicky.com/js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../lectures/local.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../lectures/learning.html"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">From approximation bounds to learning</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Model approximation in MDPs and POMDPs</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course outline</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/static-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/dynamic-programming.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/MDP-properties.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Properties of value functions</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/model-approximation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Model approximation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/state-abstraction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">State abstraction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/sample-path-bounds.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sample-path bounds</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/pomdps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">POMDPs and information states</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/ais.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Approximate Information States</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/certainty-equivalence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Certainty equivalence in POMDPs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/learning.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">From approximation bounds to learning</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#infinite-horizon-discounted-mdps" id="toc-infinite-horizon-discounted-mdps" class="nav-link active" data-scroll-target="#infinite-horizon-discounted-mdps"><span class="header-section-number">10.1</span> Infinite-horizon discounted MDPs</a></li>
+  <li><a href="#sup-norm-approximation-bounds-under-discounting" id="toc-sup-norm-approximation-bounds-under-discounting" class="nav-link" data-scroll-target="#sup-norm-approximation-bounds-under-discounting"><span class="header-section-number">10.2</span> Sup-norm approximation bounds under discounting</a></li>
+  <li><a href="#example-1-sample-complexity-of-generative-models" id="toc-example-1-sample-complexity-of-generative-models" class="nav-link" data-scroll-target="#example-1-sample-complexity-of-generative-models"><span class="header-section-number">10.3</span> Example 1: Sample complexity of generative models</a>
+  <ul class="collapse">
+  <li><a href="#setup" id="toc-setup" class="nav-link" data-scroll-target="#setup"><span class="header-section-number">10.3.1</span> Setup</a></li>
+  <li><a href="#from-model-mismatch-to-policy-error" id="toc-from-model-mismatch-to-policy-error" class="nav-link" data-scroll-target="#from-model-mismatch-to-policy-error"><span class="header-section-number">10.3.2</span> From model mismatch to policy error</a></li>
+  <li><a href="#hoeffding-bound-on-the-empirical-model" id="toc-hoeffding-bound-on-the-empirical-model" class="nav-link" data-scroll-target="#hoeffding-bound-on-the-empirical-model"><span class="header-section-number">10.3.3</span> Hoeffding bound on the empirical model</a></li>
+  <li><a href="#sample-complexity" id="toc-sample-complexity" class="nav-link" data-scroll-target="#sample-complexity"><span class="header-section-number">10.3.4</span> Sample complexity</a></li>
+  </ul></li>
+  <li><a href="#example-2-q-learning-with-agent-state-policies" id="toc-example-2-q-learning-with-agent-state-policies" class="nav-link" data-scroll-target="#example-2-q-learning-with-agent-state-policies"><span class="header-section-number">10.4</span> Example 2: Q-learning with agent-state policies</a>
+  <ul class="collapse">
+  <li><a href="#agent-state-q-learning" id="toc-agent-state-q-learning" class="nav-link" data-scroll-target="#agent-state-q-learning"><span class="header-section-number">10.4.1</span> Agent-state Q-learning</a></li>
+  <li><a href="#the-induced-agent-state-mdp-and-the-ql-limit" id="toc-the-induced-agent-state-mdp-and-the-ql-limit" class="nav-link" data-scroll-target="#the-induced-agent-state-mdp-and-the-ql-limit"><span class="header-section-number">10.4.2</span> The induced agent-state MDP and the QL limit</a></li>
+  <li><a href="#approximation-error-relative-to-the-history-based-mdp" id="toc-approximation-error-relative-to-the-history-based-mdp" class="nav-link" data-scroll-target="#approximation-error-relative-to-the-history-based-mdp"><span class="header-section-number">10.4.3</span> Approximation error relative to the history-based MDP</a></li>
+  <li><a href="#reading-the-bound" id="toc-reading-the-bound" class="nav-link" data-scroll-target="#reading-the-bound"><span class="header-section-number">10.4.4</span> Reading the bound</a></li>
+  </ul></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">From approximation bounds to learning</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>In this lecture, we give a few examples showing how approximation bounds apply in learning. We first recall the infinite-horizon discounted-cost background that most of this work uses.</p>
+<section id="infinite-horizon-discounted-mdps" class="level2" data-number="10.1">
+<h2 data-number="10.1" class="anchored" data-anchor-id="infinite-horizon-discounted-mdps"><span class="header-section-number">10.1</span> Infinite-horizon discounted MDPs</h2>
+<p>Consider a time-homogeneous MDP with state space <span class="math inline">\(\ALPHABET S\)</span> and action space <span class="math inline">\(\ALPHABET A\)</span>, transition kernel <span class="math inline">\(P\)</span>, and per-step cost <span class="math inline">\(c\)</span>. We assume that the system runs for an infinite horizon and the future is discounted by a factor <span class="math inline">\(γ \in (0,1)\)</span>.</p>
+<p>The infinite-horizon discounted cost of a (possibly history-based) policy <span class="math inline">\(π\)</span> is <span class="math display">\[
+  J(π) = \EXP^{π}\Bigl[ \sum_{t=1}^∞ γ^{t-1} c(S_t, A_t) \Bigr].
+\]</span></p>
+<p>As before, define <span class="math display">\[
+  V^π(s) = \EXP^{π}\Bigl[ \sum_{t=1}^∞ γ^{t-1} c(S_t, A_t) \bigm| S_1 = s \Bigr]
+\]</span> and let <span class="math inline">\(V^\star\)</span> denote the value function of the optimal policy.</p>
+<p>Intuitively, we expect <span class="math inline">\(V^\pi\)</span> and <span class="math inline">\(V^\star\)</span> to satisfy the following fixed point equations: <span class="math display">\[
+  V^π = \BELLMAN^π V^π,
+  \qquad
+  V^\star = \BELLMAN^\star V^\star
+\]</span> where the Bellman operators are defined as <span class="math display">\[
+  \BELLMAN^π = \ALPHABET T^π \circ \ENV,
+  \quad \BELLMAN^\star = \ALPHABET T^\star \circ \ENV,
+\]</span> with the environment operator given by <span class="math display">\[
+  [\ENV v](s,a)
+  = c(s,a)
+  + γ \sum_{s' \in \ALPHABET S} P(s'|s,a)\, v(s'),
+\]</span> and the action-selection operators <span class="math inline">\(\ALPHABET T^π\)</span>, <span class="math inline">\(\ALPHABET T^\star\)</span> given by <span class="math display">\[
+  [\ALPHABET T^π q](s) = q\bigl(s, π(s)\bigr),
+  \qquad
+  [\ALPHABET T^\star q](s) = \min_{a \in \ALPHABET A} q(s,a).
+\]</span></p>
+<p>Thus, the only structural change relative to the finite-horizon case is the factor <span class="math inline">\(γ\)</span> in <span class="math inline">\(\ENV\)</span>.</p>
+<div id="lem-env-contraction" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 10.1 (Discounted environment is a contraction)</strong></span> For any <span class="math inline">\(v, \hat v \in \ALPHABET V\)</span>, <span class="math display">\[
+  \NORM{\ENV v - \ENV \hat v}
+  \le γ\, \NORM{v - \hat v}.
+\]</span> In particular, <span class="math inline">\(\ENV\)</span> is a contraction of modulus <span class="math inline">\(γ\)</span> on <span class="math inline">\((\ALPHABET V, \NORM{⋅}_∞)\)</span>. The action-selection maps <span class="math inline">\(\ALPHABET T^π\)</span> and <span class="math inline">\(\ALPHABET T^\star\)</span> remain non-expansions, so both <span class="math inline">\(\BELLMAN^π\)</span> and <span class="math inline">\(\BELLMAN^\star\)</span> are <span class="math inline">\(γ\)</span>-contractions as well: <span class="math display">\[
+  \NORM{\BELLMAN v - \BELLMAN \hat v}
+  \le γ\, \NORM{v - \hat v},
+  \qquad
+  \BELLMAN \in \{\BELLMAN^π, \BELLMAN^\star\}.
+\]</span></p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>For any <span class="math inline">\((s,a)\)</span>, <span class="math display">\[
+  \ABS{[\ENV v](s,a) - [\ENV \hat v](s,a)}
+  = γ\,
+  \ABS{
+    \sum_{s' \in \ALPHABET S}
+    P(s'|s,a)\, \bigl(v(s') - \hat v(s')\bigr)
+  }
+  \le γ\, \NORM{v - \hat v}.
+\]</span> Taking the supremum over <span class="math inline">\((s,a)\)</span> gives the claim for <span class="math inline">\(\ENV\)</span>. Composing with a non-expansion preserves the contraction modulus, so the same bound holds for <span class="math inline">\(\BELLMAN^π\)</span> and <span class="math inline">\(\BELLMAN^\star\)</span>.</p>
+</div>
+</div>
+</div>
+<p>Because <span class="math inline">\(\BELLMAN^π\)</span> and <span class="math inline">\(\BELLMAN^\star\)</span> are contractions on a Banach space, the Banach fixed-point theorem implies that there exist unique bounded solutions of <span class="math inline">\(V = \BELLMAN^π V\)</span> and <span class="math inline">\(V = \BELLMAN^\star V\)</span>. We can also show that the optimal policy is the greedy policy of <span class="math inline">\(V^\star\)</span>.</p>
+<p>See <a href="https://adityam.github.io/stochastic-control/mdps/inf-horizon.html">lecture notes on infinite horizon MDPs</a> for more details.</p>
+</section>
+<section id="sup-norm-approximation-bounds-under-discounting" class="level2" data-number="10.2">
+<h2 data-number="10.2" class="anchored" data-anchor-id="sup-norm-approximation-bounds-under-discounting"><span class="header-section-number">10.2</span> Sup-norm approximation bounds under discounting</h2>
+<p>The finite-horizon model-approximation and state-abstraction lectures bounded gaps by summing one-step mismatches. With the <span class="math inline">\(\hat V^\star\)</span>-sided choice, the model-approximation error satisfied <span class="math display">\[
+  α_t
+  \coloneqq \NORM{V^\star_t - V^{\hat π^\star}_t}
+  \le 2 \sum_{τ=t}^{T} \NORM{\MISMATCH_τ \hat V^\star_{τ+1}},
+\]</span> and the <span class="math inline">\(V^\star\)</span>-sided companion introduced additional horizon weights <span class="math inline">\((τ - t + 1)\)</span>. Sample-path envelopes accumulated the same way along residual time.</p>
+<p>In the discounted model the operators no longer depend on <span class="math inline">\(t\)</span>, so write <span class="math inline">\(\MISMATCH v \coloneqq \ENV v - \hat \ENV v\)</span> for the time-homogeneous mismatch and <span class="math inline">\(α \coloneqq \NORM{V^\star - V^{\hat π^\star}}\)</span> for the (single) model-approximation gap. The contraction of <span class="math inline">\(\ENV\)</span> replaces the residual-horizon sum by a geometric series. The same one-step triangle used in the finite-horizon proofs yields <span class="math display">\[
+  \NORM{V^π - \hat V^π}
+  \le \frac{1}{1-γ}\,
+  \min\bigl\{
+    \NORM{\MISMATCH V^π},\,
+    \NORM{\MISMATCH \hat V^π}
+  \bigr\}
+\]</span> for policy evaluation, and the analogous bound for <span class="math inline">\(V^\star - \hat V^\star\)</span>. Combining the two sides as in the model-approximation lecture gives the discounted model-approximation bound <span class="math display">\[
+  \NORM{V^{\hat π^\star} - V^\star}
+  \le \frac{2}{1-γ}\, \NORM{\MISMATCH \hat V^\star}.
+\]</span> The <span class="math inline">\(V^\star\)</span>-sided form picks up one extra <span class="math inline">\(1/(1-γ)\)</span> factor, matching the finite-horizon weight <span class="math inline">\((τ-t+1)\)</span> in the large-<span class="math inline">\(T\)</span> limit. <span class="math display">\[
+  \NORM{V^{\hat π^\star} - V^\star}
+  \le \frac{2}{(1-γ)^2}\, \NORM{\MISMATCH V^\star}.
+\]</span> State abstraction and AIS specialize in the same way: lift / push-forward the mismatch through <span class="math inline">\(ϕ\)</span> (or through the AIS compression of a history-based MDP), then close the recursion with the geometric factor <span class="math inline">\(1/(1-γ)\)</span> instead of a sum over <span class="math inline">\(t,\dots,T\)</span>.</p>
+<p>Similar generalizations hold for other variations of the finite horizon approximation bounds as well.</p>
+</section>
+<section id="example-1-sample-complexity-of-generative-models" class="level2" data-number="10.3">
+<h2 data-number="10.3" class="anchored" data-anchor-id="example-1-sample-complexity-of-generative-models"><span class="header-section-number">10.3</span> Example 1: Sample complexity of generative models</h2>
+<p>An important question in model-based learning is how many samples are needed to identify an <span class="math inline">\(α\)</span>-approximate solution for a prescribed accuracy <span class="math inline">\(α &gt; 0\)</span>. This is the <strong>sample complexity</strong> of learning. The standard analysis assumes access to a <strong>generative model</strong>: a black-box simulator that, on input <span class="math inline">\((s,a)\)</span>, returns an independent sample <span class="math inline">\(S_+ \sim P(\cdot \mid s,a)\)</span> of the next state.</p>
+<p>The simplest algorithm in this setting is the <strong>plug-in estimator</strong> (certainty equivalent controller): estimate the transition kernel from samples, compute an optimal policy for the estimated model, and deploy that policy on the true system. The approximation bounds of the infinite-horizon discounted model turn this into a concrete sample-size guarantee.</p>
+<section id="setup" class="level3" data-number="10.3.1">
+<h3 data-number="10.3.1" class="anchored" data-anchor-id="setup"><span class="header-section-number">10.3.1</span> Setup</h3>
+<p>Consider an infinite-horizon discounted MDP <span class="math display">\[
+  \ALPHABET M = \langle \ALPHABET S, \ALPHABET A, P, c, γ \rangle
+\]</span> with finite <span class="math inline">\(\ALPHABET S\)</span> and <span class="math inline">\(\ALPHABET A\)</span>. Suppose <span class="math inline">\(\langle \ALPHABET S, \ALPHABET A, c, γ \rangle\)</span> are known but the transition kernel <span class="math inline">\(P\)</span> is not. We have access to a generative model: for any <span class="math inline">\((s,a)\)</span> we may draw <span class="math inline">\(S_+ \sim P(\cdot \mid s,a)\)</span>. Call the simulator <span class="math inline">\(N\)</span> times at each state-action pair and form the empirical kernel <span class="math display">\[
+  \hat P_N(s' \mid s,a)
+  = \frac{\operatorname{count}(s' \mid s,a)}{N},
+\]</span> where <span class="math inline">\(\operatorname{count}(s' \mid s,a)\)</span> is the number of times <span class="math inline">\(s'\)</span> is returned on input <span class="math inline">\((s,a)\)</span>. The empirical MDP <span class="math display">\[
+  \widehat{\ALPHABET M}_N
+  = \langle \ALPHABET S, \ALPHABET A, \hat P_N, c, γ \rangle
+\]</span> is then an approximate model of <span class="math inline">\(\ALPHABET M\)</span> in the sense of the model-approximation lecture: the cost is exact and only the transitions are perturbed.</p>
+<p>Assume a <strong>planning oracle</strong> that, given <span class="math inline">\(\widehat{\ALPHABET M}_N\)</span>, returns an optimal policy <span class="math inline">\(\hat π_N\)</span> of the approximate model. The sample-complexity question is: given <span class="math inline">\(α &gt; 0\)</span> and <span class="math inline">\(p \in (0,1)\)</span>, how large must <span class="math inline">\(N\)</span> be so that <span class="math display">\[
+  \NORM{V^\star - V^{\hat π_N}}
+  \le α
+\]</span> with probability at least <span class="math inline">\(1-p\)</span>?</p>
+</section>
+<section id="from-model-mismatch-to-policy-error" class="level3" data-number="10.3.2">
+<h3 data-number="10.3.2" class="anchored" data-anchor-id="from-model-mismatch-to-policy-error"><span class="header-section-number">10.3.2</span> From model mismatch to policy error</h3>
+<p>As above, write <span class="math inline">\(\MISMATCH v \coloneqq \ENV v - \hat\ENV v\)</span> for the time-homogeneous mismatch between <span class="math inline">\(\ALPHABET M\)</span> and <span class="math inline">\(\widehat{\ALPHABET M}_N\)</span>. Write <span class="math inline">\(\DYNAMICS\)</span> and <span class="math inline">\(\hat\DYNAMICS_N\)</span> for the corresponding dynamics operators (as in the sample-path lecture), <span class="math display">\[
+  [\DYNAMICS v](s,a)
+  = \sum_{s' \in \ALPHABET S} P(s'\mid s,a)\, v(s'),
+  \qquad
+  [\hat\DYNAMICS_N v](s,a)
+  = \sum_{s' \in \ALPHABET S} \hat P_N(s'\mid s,a)\, v(s'),
+\]</span> so that <span class="math inline">\(\ENV v = c + γ\, \DYNAMICS v\)</span> and likewise for <span class="math inline">\(\hat\ENV\)</span>. Because the cost is known, <span class="math display">\[
+  \MISMATCH V^\star
+  = γ\, (\DYNAMICS - \hat\DYNAMICS_N) V^\star,
+\]</span> and therefore <span class="math display">\[
+  \NORM{\MISMATCH V^\star}
+  = γ\, \NORM{(\DYNAMICS - \hat\DYNAMICS_N) V^\star}.
+\]</span></p>
+<p>The <span class="math inline">\(V^\star\)</span>-sided discounted model-approximation bound therefore yields <span class="math display">\[
+  \NORM{V^\star - V^{\hat π_N}}
+  \le \frac{2}{(1-γ)^2}\, \NORM{\MISMATCH V^\star}
+  = \frac{2γ}{(1-γ)^2}\, \NORM{(\DYNAMICS - \hat\DYNAMICS_N) V^\star}.
+\]</span></p>
+<p>Thus it is enough to drive <span class="math inline">\(\NORM{(\DYNAMICS - \hat\DYNAMICS_N) V^\star}\)</span> below <span class="math inline">\(α(1-γ)^2/(2γ)\)</span>.</p>
+</section>
+<section id="hoeffding-bound-on-the-empirical-model" class="level3" data-number="10.3.3">
+<h3 data-number="10.3.3" class="anchored" data-anchor-id="hoeffding-bound-on-the-empirical-model"><span class="header-section-number">10.3.3</span> Hoeffding bound on the empirical model</h3>
+<p>Let <span class="math inline">\(H = \operatorname{span}(V^\star)\)</span>. For a fixed <span class="math inline">\((s,a)\)</span> and any threshold <span class="math inline">\(c &gt; 0\)</span>, Hoeffding’s inequality gives <span class="math display">\[
+  \PR\biggl(
+    \ABS{\bigl[(\DYNAMICS - \hat\DYNAMICS_N) V^\star\bigr](s,a)}
+    \ge c
+  \biggr)
+  \le 2 \exp\biggl( -\frac{2 N c^2}{H^2} \biggr).
+\]</span> A union bound over <span class="math inline">\(\ALPHABET S \times \ALPHABET A\)</span> then yields <span class="math display">\[
+  \PR\bigl(
+    \NORM{(\DYNAMICS - \hat\DYNAMICS_N) V^\star} \ge c
+  \bigr)
+  \le 2\, |\ALPHABET S|\, |\ALPHABET A|\,
+  \exp\biggl( -\frac{2 N c^2}{H^2} \biggr).
+\]</span></p>
+</section>
+<section id="sample-complexity" class="level3" data-number="10.3.4">
+<h3 data-number="10.3.4" class="anchored" data-anchor-id="sample-complexity"><span class="header-section-number">10.3.4</span> Sample complexity</h3>
+<p>Choose the threshold <span class="math display">\[
+  c = \frac{α(1-γ)^2}{2γ}
+\]</span> so that <span class="math inline">\(\NORM{(\DYNAMICS - \hat\DYNAMICS_N) V^\star} \le c\)</span> implies <span class="math inline">\(\NORM{V^\star - V^{\hat π_N}} \le α\)</span>. Requiring the failure probability to be at most <span class="math inline">\(p\)</span> forces <span class="math display">\[
+  2\, |\ALPHABET S|\, |\ALPHABET A|\,
+  \exp\biggl( -\frac{2 N c^2}{H^2} \biggr)
+  \le p,
+\]</span> hence it is enough to take <span class="math display">\[
+  N
+  \ge \frac{2 H^2 γ^2}{α^2 (1-γ)^4}
+  \log\biggl(
+    \frac{2\, |\ALPHABET S|\, |\ALPHABET A|}{p}
+  \biggr).
+\]</span> The total number of simulator calls is <span class="math inline">\(N\,|\ALPHABET S|\,|\ALPHABET A|\)</span>.</p>
+<p>In words: once the generative model has been queried often enough that the empirical MDP is close to <span class="math inline">\(\ALPHABET M\)</span> in the <span class="math inline">\(V^\star\)</span>-weighted dynamics sense <span class="math inline">\(\NORM{(\DYNAMICS - \hat\DYNAMICS_N) V^\star}\)</span>, the infinite-horizon model-approximation bound upgrades that model error into a policy sub-optimality guarantee of size <span class="math inline">\(α\)</span>, with high probability.</p>
+</section>
+</section>
+<section id="example-2-q-learning-with-agent-state-policies" class="level2" data-number="10.4">
+<h2 data-number="10.4" class="anchored" data-anchor-id="example-2-q-learning-with-agent-state-policies"><span class="header-section-number">10.4</span> Example 2: Q-learning with agent-state policies</h2>
+<p>In a partially observed discounted model the natural planning state is the belief (an exact information state of the history-based MDP from the AIS lecture). Beliefs require the system model, so they are not available in a model-free learning setting. A standard substitute is an <strong>agent state</strong>: a recursively updated, model-free compression of the observation-action history.</p>
+<p>Fix a space <span class="math inline">\(\ALPHABET Z\)</span> and an update map <span class="math inline">\(ϕ\)</span>. Starting from an initial <span class="math inline">\(z_1\)</span> (or <span class="math inline">\(z_0\)</span> with a dummy initialization), set <span class="math display">\[
+  Z_{t+1}
+  = ϕ\bigl(Z_t, A_t, Y_{t+1}\bigr).
+\]</span> Unrolling <span class="math inline">\(ϕ\)</span> defines a history map <span class="math inline">\(σ_t \colon \ALPHABET H_t \to \ALPHABET Z\)</span> with <span class="math inline">\(Z_t = σ_t(H_t)\)</span>. Typical choices are a sliding window of recent observations (frame stacking) or the hidden state of a recurrent network. An <strong>agent-state policy</strong> chooses <span class="math inline">\(A_t\)</span> as a (possibly randomized) function of <span class="math inline">\(Z_t\)</span> alone.</p>
+<p>Unlike the belief, a generic agent state need <strong>not</strong> be Markov and need <strong>not</strong> be an information state: the conditional law of the next cost and next agent state given <span class="math inline">\((H_t,A_t)\)</span> need not factor through <span class="math inline">\(Z_t\)</span>. There is then no exact dynamic program on <span class="math inline">\(\ALPHABET Z\)</span>, and stationary agent-state policies need not be as good as history-dependent (or even non-stationary agent-state) policies. Nevertheless one can still run tabular Q-learning <strong>as if</strong> <span class="math inline">\((Z_t)\)</span> were a Markov state.</p>
+<section id="agent-state-q-learning" class="level3" data-number="10.4.1">
+<h3 data-number="10.4.1" class="anchored" data-anchor-id="agent-state-q-learning"><span class="header-section-number">10.4.1</span> Agent-state Q-learning</h3>
+<p>Let <span class="math inline">\(μ \colon \ALPHABET Z \to Δ(\ALPHABET A)\)</span> be a stationary behavior policy, and let <span class="math inline">\((Z_t,A_t,C_t,Z_{t+1})_{t \ge 1}\)</span> be the stream observed while acting by <span class="math inline">\(A_t \sim μ(Z_t)\)</span> and receiving the realized per-step cost <span class="math inline">\(C_t\)</span>. The agent-state Q-learning recursion is the usual asynchronous update on <span class="math inline">\(\ALPHABET Z \times \ALPHABET A\)</span>: <span class="math display">\[
+  Q_{t+1}(z,a)
+  = Q_t(z,a)
+  + α_t(z,a)\,
+  \Bigl[
+    C_t
+    + γ \min_{a' \in \ALPHABET A} Q_t(Z_{t+1}, a')
+    - Q_t(z,a)
+  \Bigr],
+\]</span> with <span class="math inline">\(α_t(z,a) = 0\)</span> unless <span class="math inline">\((Z_t,A_t) = (z,a)\)</span>, and with step sizes satisfying the usual Robbins–Monro conditions (<span class="math inline">\(\sum_t α_t(z,a) = ∞\)</span> and <span class="math inline">\(\sum_t α_t(z,a)^2 &lt; ∞\)</span> almost surely, for every <span class="math inline">\((z,a)\)</span>).</p>
+</section>
+<section id="the-induced-agent-state-mdp-and-the-ql-limit" class="level3" data-number="10.4.2">
+<h3 data-number="10.4.2" class="anchored" data-anchor-id="the-induced-agent-state-mdp-and-the-ql-limit"><span class="header-section-number">10.4.2</span> The induced agent-state MDP and the QL limit</h3>
+<p>Even though <span class="math inline">\(\{Z_t\}\)</span> itself is typically non-Markov, the joint process <span class="math inline">\(\{(S_t,Y_t,Z_t,A_t)\}\)</span> <strong>is</strong> Markov under a stationary agent-state behavior policy. Assume <span class="math inline">\(μ\)</span> makes this chain positive recurrent with unique stationary distribution <span class="math inline">\(ζ_μ\)</span>, and that every <span class="math inline">\((z,a)\)</span> has <span class="math inline">\(ζ_μ(z,a) &gt; 0\)</span> (so every agent-state–action pair is visited infinitely often).</p>
+<p>Define an <strong>induced</strong> time-homogeneous MDP <span class="math inline">\(\widehat{\ALPHABET M}_μ\)</span> on <span class="math inline">\(\ALPHABET Z\)</span> by averaging the true cost and the agent-state update against the stationary conditional of the hidden state: <span class="math display">\[\begin{align*}
+  \hat c_μ(z,a)
+  &amp;\coloneqq
+  \sum_{s \in \ALPHABET S}
+  c(s,a)\, ζ_μ(s \mid z,a),
+  \\
+  \hat P_μ(z' \mid z,a)
+  &amp;\coloneqq
+  \sum_{(s,y') \in \ALPHABET S \times \ALPHABET Y}
+  \IND\bigl\{ z' = ϕ(z,a,y') \bigr\}\,
+  P^Y(y' \mid s,a)\,
+  ζ_μ(s \mid z,a).
+\end{align*}\]</span> Let <span class="math inline">\(Q_μ\)</span> be the optimal action-value function of <span class="math inline">\(\widehat{\ALPHABET M}_μ\)</span>, i.e.&nbsp;the unique solution of <span class="math display">\[
+  Q_μ(z,a)
+  = \hat c_μ(z,a)
+  + γ \sum_{z' \in \ALPHABET Z}
+  \hat P_μ(z' \mid z,a)\,
+  \min_{a' \in \ALPHABET A} Q_μ(z',a'),
+\]</span> and write <span class="math inline">\(V_μ(z) \coloneqq \min_a Q_μ(z,a)\)</span> with greedy policy <span class="math inline">\(\hat π_μ(z) \in \arg\min_a Q_μ(z,a)\)</span>. Lift to histories by <span class="math inline">\(π_μ(h) \coloneqq \hat π_μ\bigl(σ(h)\bigr)\)</span>.</p>
+<p>Under the step-size and exploration conditions above, <strong>agent-state Q-learning converges almost surely to <span class="math inline">\(Q_μ\)</span></strong>. (We treat this as a black-box stochastic-approximation fact and do not develop the proof here.) The policy returned by learning is therefore the greedy policy of the induced MDP <span class="math inline">\(\widehat{\ALPHABET M}_μ\)</span>.</p>
+<p>Two structural remarks follow at once.</p>
+<ol type="1">
+<li><p><strong>Policy dependence of the limit.</strong> Because <span class="math inline">\(Z_t\)</span> is not an information state, the occupancy <span class="math inline">\(ζ_μ\)</span> (and hence <span class="math inline">\(\hat c_μ\)</span>, <span class="math inline">\(\hat P_μ\)</span>, and <span class="math inline">\(Q_μ\)</span>) generally depends on the behavior policy <span class="math inline">\(μ\)</span>. This cannot happen for belief-state Q-learning: the belief filter is policy-independent.</p></li>
+<li><p><strong>What is being optimized.</strong> Convergence is to optimality in <span class="math inline">\(\widehat{\ALPHABET M}_μ\)</span>, not to optimality in the original POMDP, and not even to the best stationary agent-state policy under a different occupancy. Improving <span class="math inline">\(μ\)</span> (or enriching <span class="math inline">\(\ALPHABET Z\)</span>) changes the target.</p></li>
+</ol>
+</section>
+<section id="approximation-error-relative-to-the-history-based-mdp" class="level3" data-number="10.4.3">
+<h3 data-number="10.4.3" class="anchored" data-anchor-id="approximation-error-relative-to-the-history-based-mdp"><span class="header-section-number">10.4.3</span> Approximation error relative to the history-based MDP</h3>
+<p>The pair <span class="math inline">\((\hat c_μ, \hat P_μ)\)</span> is an approximate model for the history-based MDP along the agent-state coordinates, in the same sense as an AIS generator (<a href="ais.html#def-ais" class="quarto-xref">Definition&nbsp;<span>8.1</span></a>), except that the abstract kernels are tied to the learning occupancy <span class="math inline">\(ζ_μ\)</span> rather than chosen by the designer.</p>
+<p>Fix an IPM class <span class="math inline">\(\mathfrak{F}\)</span> on <span class="math inline">\(\ALPHABET Z\)</span> with Minkowski functional <span class="math inline">\(ρ_{\mathfrak{F}}\)</span>, and define the uniform one-step mismatches <span class="math display">\[\begin{align*}
+  ε
+  &amp;\coloneqq
+  \sup_{h,a}
+  \ABS{
+    \EXP\bigl[c(S,A) \bigm| H = h,\, A = a\bigr]
+    - \hat c_μ\bigl(σ(h), a\bigr)
+  },
+  \\
+  δ
+  &amp;\coloneqq
+  \sup_{h,a}
+  d_{\mathfrak{F}}\!\Bigl(
+    \PR\bigl(Z_+ \in \cdot \bigm| H = h,\, A = a\bigr),\,
+    \hat P_μ\bigl(\cdot \mid σ(h), a\bigr)
+  \Bigr).
+\end{align*}\]</span> Thus <span class="math inline">\(ε\)</span> is the cost error of treating <span class="math inline">\(ζ_μ(\,\cdot\mid z,a)\)</span> as the hidden-state posterior given history, and <span class="math inline">\(δ\)</span> is the IPM error of the induced next-agent-state kernel (the agent-state analogue of (AP1)–(AP2)).</p>
+<p>The infinite-horizon discounted form of the AIS / model-approximation guarantee (<a href="ais.html#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a>, <a href="ais.html#cor-ais-ipm" class="quarto-xref">Corollary&nbsp;<span>8.1</span></a>, with the geometric factor from earlier in this lecture) then yields <span class="math display">\[
+  \sup_h
+  \bigl(
+    V^{π_μ}(h) - V^\star(h)
+  \bigr)
+  \le
+  \frac{2}{1-γ}
+  \bigl(
+    ε + γ\, δ\, ρ_{\mathfrak{F}}(V_μ)
+  \bigr).
+\]</span> Here <span class="math inline">\(V^\star\)</span> is the optimal value over history-dependent policies (equivalently, over belief-state policies). The factor <span class="math inline">\(2/(1-γ)\)</span> is the usual discounted packaging of a uniform one-step mismatch of size <span class="math inline">\(ε + γ\,δ\,ρ_{\mathfrak{F}}(V_μ)\)</span>.</p>
+</section>
+<section id="reading-the-bound" class="level3" data-number="10.4.4">
+<h3 data-number="10.4.4" class="anchored" data-anchor-id="reading-the-bound"><span class="header-section-number">10.4.4</span> Reading the bound</h3>
+<ul>
+<li>If the agent state is a fine approximation of the belief (so that <span class="math inline">\(ζ_μ(s\mid z,a)\)</span> stays close to the true filter and the push-forward dynamics stay close in <span class="math inline">\(d_{\mathfrak{F}}\)</span>), then <span class="math inline">\(ε\)</span> and <span class="math inline">\(δ\)</span> are small and the greedy agent-state policy is near-optimal.</li>
+<li>If the agent state is coarse (constant memory, short frame stack, poorly trained RNN), Q-learning may still converge cleanly to <span class="math inline">\(Q_μ\)</span>, but <span class="math inline">\(ε\)</span> or <span class="math inline">\(δ\)</span> remains large and the gap to <span class="math inline">\(V^\star\)</span> need not vanish.</li>
+<li>The bound compares to the <strong>optimal history-based</strong> value, so it already includes the representation gap between <span class="math inline">\(\ALPHABET Z\)</span> and the belief. Perfect learning of <span class="math inline">\(Q_μ\)</span> cannot remove that gap.</li>
+</ul>
+<p>In short: agent-state Q-learning is Q-learning for an occupancy-induced abstract MDP on <span class="math inline">\(Z\)</span>; convergence identifies that MDP’s optimum, while <span class="math inline">\((ε,δ)\)</span> quantify how far that abstract optimum sits from the POMDP optimum on the history-based MDP.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Stationary vs.&nbsp;non-stationary agent-state policies
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Because a generic agent state is not Markov, restricting to <strong>stationary</strong> greedy policies (as ordinary Q-learning does) can be strictly suboptimal inside the agent-state class. One remedy is to learn a <strong>periodic</strong> family of Q-functions and policies; that extension is conceptually the same as the construction above, with a cyclic induced model of period <span class="math inline">\(L\)</span> in place of <span class="math inline">\(\widehat{\ALPHABET M}_μ\)</span>. We stay with the stationary (<span class="math inline">\(L = 1\)</span>) case here.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="notes" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="notes">Notes</h2>
+<p>The material on Q-learning with agent-state policies is from <span class="citation" data-cites="SinhaGeistMahajan2024">Sinha et al. (<a href="#ref-SinhaGeistMahajan2024" role="doc-biblioref">2024</a>)</span>.</p>
+</section>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-SinhaGeistMahajan2024" class="csl-entry" role="listitem">
+<span class="smallcaps">Sinha, A., Geist, M., and Mahajan, A.</span> 2024. Periodic agent-state based <span>Q</span>-learning for <span>POMDPs</span>. <em>Advances in neural information processing systems</em>. Available at: <a href="https://proceedings.neurips.cc/paper_files/paper/2024/hash/71b52a5b3fe2e9303433a174b60e160d-Abstract-Conference.html">https://proceedings.neurips.cc/paper_files/paper/2024/hash/71b52a5b3fe2e9303433a174b60e160d-Abstract-Conference.html</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/adityam\.github\.io\/AIS-course\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../lectures/certainty-equivalence.html" class="pagination-link" aria-label="Certainty equivalence in POMDPs">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Certainty equivalence in POMDPs</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

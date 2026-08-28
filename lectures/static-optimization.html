@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="keywords" content="stochastic optimization, newsvendor problem, MPSoC reliability, decision tree, principle of irrelevant information">
+<meta name="description" content="Lecture notes CNI Summer School 2026">
+
+<title>1&nbsp; Stochastic optimization – Model approximation in MDPs and POMDPs</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../lectures/dynamic-programming.html" rel="next">
+<link href="../index.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-610e5c2789cf4792c2c6ad2d8bcb67e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+// https://github.com/mathjax/MathJax/issues/2744#issuecomment-1658624747
+// To fix the bug that uppercase unicode letters are shown in italic
+window.MathJax = {
+  loader: {
+    load: ['[tex]/mathtools']
+  },
+  startup: {
+    ready() {
+      const {RANGES} = MathJax._.core.MmlTree.OperatorDictionary;
+      const {TEXCLASS} = MathJax._.core.MmlTree.MmlNode;
+      RANGES.splice(4, 1,
+        [0x0370, 0x0385, TEXCLASS.ORD, 'mi'],
+        [0x0386, 0x3AB, TEXCLASS.ORD, 'mi', 'normal'],
+        [0x03AC, 0x1A20, TEXCLASS.ORD, 'mi']
+      );
+      MathJax.startup.defaultReady();
+    }
+  },
+  tex: {
+    packages: {'[+]': ['mathtools']},
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+    processEscapes: true,
+    tags: "ams",
+    macros: {
+      PR: "\\mathbb{P}",
+      EXP: "\\mathbb{E}",
+      LEXP: "\\mathbb{L}",
+      "VAR": "\\operatorname{var}",
+      COV: "\\operatorname{cov}",
+      IND: "\\mathbb{1}",
+      ONES: "\\mathbf{1}",
+      reals: "\\mathbb{R}",
+      integers: "\\mathbb{Z}",
+      naturalnumbers: "\\mathbb{N}",
+      BLANK: "\\mathfrak{E}",
+      TRANS: "\\intercal",
+      BELLMAN: "\\mathcal{B}",
+      ENV: "\\mathcal{E}",
+      DYNAMICS: "\\mathcal{P}",
+      ADVANTAGE: "\\mathcal{A}",
+      RICCATI: "\\mathcal{R}",
+      GAIN: "\\mathcal{G}",
+      GREEDY: "\\mathcal{G}",
+      MISMATCH: "\\mathcal{D}",
+      VEC: "\\operatorname{vec}",
+      diag: "\\operatorname{diag}",
+      ROWS: "\\operatorname{vec}",
+      TR: "\\operatorname{Tr}",   
+      SPAN: "\\operatorname{sp}",   
+      DRE: "\\operatorname{DRE}",   
+      DARE: "\\operatorname{DARE}",   
+      LQR: "\\operatorname{LQR}",   
+      ALPHABET: ["\\mathcal{#1}", 1],
+      MATRIX: ["\\begin{bmatrix} #1 \\end{bmatrix}", 1],
+      NORM: ["\\left\\lVert \\mathstrut #1 \\right\\rVert", 1],
+      ABS: ["\\left\\lvert \\mathstrut #1 \\right\\rvert", 1],
+      SIZE: ["\\left\\lvert \\mathstrut \\ALPHABET #1 \\right\\rvert", 1],
+      GRAD: "\\nabla",
+      IP: ["\\left\\langle #1, #2 \\right\\rangle", 2]
+    },
+  },
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  },
+};
+</script>
+<script async="" data-id="101261731" src="//static.getclicky.com/js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../lectures/local.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../lectures/static-optimization.html"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Model approximation in MDPs and POMDPs</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course outline</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/static-optimization.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/dynamic-programming.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/MDP-properties.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Properties of value functions</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/model-approximation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Model approximation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/state-abstraction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">State abstraction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/sample-path-bounds.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sample-path bounds</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/pomdps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">POMDPs and information states</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/ais.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Approximate Information States</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/certainty-equivalence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Certainty equivalence in POMDPs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">From approximation bounds to learning</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#stochastic-optimization" id="toc-stochastic-optimization" class="nav-link active" data-scroll-target="#stochastic-optimization"><span class="header-section-number">1.1</span> Stochastic optimization</a></li>
+  <li><a href="#example-the-newsvendor-problem" id="toc-example-the-newsvendor-problem" class="nav-link" data-scroll-target="#example-the-newsvendor-problem"><span class="header-section-number">1.2</span> Example: The newsvendor problem</a>
+  <ul class="collapse">
+  <li><a href="#decision-trees" id="toc-decision-trees" class="nav-link" data-scroll-target="#decision-trees"><span class="header-section-number">1.2.1</span> Decision trees</a></li>
+  <li><a href="#the-continuous-version" id="toc-the-continuous-version" class="nav-link" data-scroll-target="#the-continuous-version"><span class="header-section-number">1.2.2</span> The continuous version</a></li>
+  <li><a href="#the-discrete-version" id="toc-the-discrete-version" class="nav-link" data-scroll-target="#the-discrete-version"><span class="header-section-number">1.2.3</span> The discrete version</a></li>
+  <li><a href="#acting-based-on-historical-data" id="toc-acting-based-on-historical-data" class="nav-link" data-scroll-target="#acting-based-on-historical-data"><span class="header-section-number">1.2.4</span> Acting based on historical data</a></li>
+  </ul></li>
+  <li><a href="#example-reliability-of-an-mpsoc" id="toc-example-reliability-of-an-mpsoc" class="nav-link" data-scroll-target="#example-reliability-of-an-mpsoc"><span class="header-section-number">1.3</span> Example: reliability of an MPSoC</a></li>
+  <li><a href="#stochastic-optimization-with-observations" id="toc-stochastic-optimization-with-observations" class="nav-link" data-scroll-target="#stochastic-optimization-with-observations"><span class="header-section-number">1.4</span> Stochastic optimization with observations</a>
+  <ul class="collapse">
+  <li><a href="#the-newsvendor-with-weather-information" id="toc-the-newsvendor-with-weather-information" class="nav-link" data-scroll-target="#the-newsvendor-with-weather-information"><span class="header-section-number">1.4.1</span> The newsvendor with weather information</a></li>
+  <li><a href="#a-tree-representation" id="toc-a-tree-representation" class="nav-link" data-scroll-target="#a-tree-representation"><span class="header-section-number">1.4.2</span> A tree representation</a></li>
+  </ul></li>
+  <li><a href="#the-general-model-and-policy-optimization" id="toc-the-general-model-and-policy-optimization" class="nav-link" data-scroll-target="#the-general-model-and-policy-optimization"><span class="header-section-number">1.5</span> The general model and policy optimization</a>
+  <ul class="collapse">
+  <li><a href="#the-general-model" id="toc-the-general-model" class="nav-link" data-scroll-target="#the-general-model"><span class="header-section-number">1.5.1</span> The general model</a></li>
+  <li><a href="#policy-evaluation-and-optimization" id="toc-policy-evaluation-and-optimization" class="nav-link" data-scroll-target="#policy-evaluation-and-optimization"><span class="header-section-number">1.5.2</span> Policy evaluation and optimization</a></li>
+  </ul></li>
+  <li><a href="#blackwells-principle-of-irrelevant-information" id="toc-blackwells-principle-of-irrelevant-information" class="nav-link" data-scroll-target="#blackwells-principle-of-irrelevant-information"><span class="header-section-number">1.6</span> Blackwell’s principle of irrelevant information</a>
+  <ul class="collapse">
+  <li><a href="#a-motivating-example" id="toc-a-motivating-example" class="nav-link" data-scroll-target="#a-motivating-example"><span class="header-section-number">1.6.1</span> A motivating example</a></li>
+  <li><a href="#the-main-result" id="toc-the-main-result" class="nav-link" data-scroll-target="#the-main-result"><span class="header-section-number">1.6.2</span> The main result</a></li>
+  </ul></li>
+  <li><a href="#main-takeaways" id="toc-main-takeaways" class="nav-link" data-scroll-target="#main-takeaways">Main takeaways</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises">Exercises</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+<div>
+  <div class="keywords">
+    <div class="block-title">Keywords</div>
+    <p>stochastic optimization, newsvendor problem, MPSoC reliability, decision tree, principle of irrelevant information</p>
+  </div>
+</div>
+
+</header>
+
+
+<p>Stochastic control is the study of sequential decision-making under uncertainty. Because these problems span various applications, their foundational theory has been developed across multiple disciplines, including systems and control, operations research, economics, and artificial intelligence. Consequently, the literature often uses different terminology and notation. While classical theory focuses on exploiting structural simplifications when the system model is perfectly known, a vast literature addresses the computational challenges of complex systems under the headings of approximate dynamic programming and reinforcement learning. In this course, we focus on model approximation, a specific subclass of these methods, with a core emphasis on deriving rigorous theoretical guarantees.</p>
+<p>We start with the single-stage (or static) decision problem: how to choose an action to minimize an expected cost that depends on a random outcome. We will address three questions:</p>
+<ol type="1">
+<li>How should a decision maker act when the outcome is uncertain?</li>
+<li>How should a decision maker use partial observations before acting?</li>
+<li>Which observations can be safely ignored without loss of optimality?</li>
+</ol>
+<p>The answers, namely <em>certainty equivalence</em>, the <em>interim view</em>, and <em>Blackwell’s principle of irrelevant information</em>, will be reused later when we treat MDPs and POMDPs.</p>
+<section id="stochastic-optimization" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="stochastic-optimization"><span class="header-section-number">1.1</span> Stochastic optimization</h2>
+<p>Let’s start with the simplest optimization problem. A decision maker has to choose an action <span class="math inline">\(a \in \ALPHABET A\)</span>. Upon choosing the action <span class="math inline">\(a\)</span>, the decision maker incurs a cost <span class="math inline">\(c(a)\)</span>. What action should the decision maker pick to minimize the cost?</p>
+<p>Formally, the above optimization problem may be written as <span class="math display">\[\begin{equation} \label{eq:det} \tag{P-Det}
+  \min_{a \in \ALPHABET A} c(a).
+\end{equation}\]</span> When <span class="math inline">\(\ALPHABET A\)</span> is finite, we can (in principle) enumerate the values <span class="math inline">\(c(a)\)</span> and pick the smallest. When <span class="math inline">\(\ALPHABET A\)</span> is continuous, the problem is tractable only under regularity conditions (e.g., convexity of <span class="math inline">\(c\)</span>).</p>
+<p>Now suppose that the cost also depends on some <strong>random variable</strong> <span class="math inline">\(W \in \ALPHABET W\)</span>, whose distribution is known to the decision maker. The decision maker chooses <span class="math inline">\(a\)</span> <em>before</em> <span class="math inline">\(W\)</span> is observed, incurs a cost <span class="math inline">\(c(a,W)\)</span>, and is assumed to be <strong>risk-neutral</strong> so that they minimize the expected cost: <span class="math display">\[\begin{equation} \label{eq:soc} \tag{P-Stoc}
+  \min_{a \in \ALPHABET A} \EXP\bigl[ c(a, W) \bigr].
+\end{equation}\]</span></p>
+<p>Define <span class="math inline">\(Q(a) = \EXP[c(a,W)]\)</span>. Then problem <span class="math inline">\(\eqref{eq:soc}\)</span> is <em>conceptually</em> the same as <span class="math inline">\(\eqref{eq:det}\)</span>: it is still a minimization over <span class="math inline">\(a\)</span> of a deterministic function <span class="math inline">\(Q\)</span>. The computational difficulty is that evaluating <span class="math inline">\(Q(a)\)</span> now requires computing an expectation.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Cost vs.&nbsp;reward
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In some settings it is more natural to maximize a reward <span class="math inline">\(r(a,W)\)</span> instead of minimizing a cost. The two formulations are equivalent (put <span class="math inline">\(c = -r\)</span>), so we pick whichever is more natural in the given context.</p>
+</div>
+</div>
+<p>We begin with some examples to illustrate how to solve <span class="math inline">\(\eqref{eq:soc}\)</span>, depending on how the cost function is structured.</p>
+</section>
+<section id="example-the-newsvendor-problem" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="example-the-newsvendor-problem"><span class="header-section-number">1.2</span> Example: The newsvendor problem</h2>
+<div id="exm-newsvendor" class="theorem example">
+<p><span class="theorem-title"><strong>Example 1.1 (The newsvendor problem)</strong></span> Each morning, a newsvendor has to decide how many newspapers to buy before knowing the demand during the day. Newspapers are bought at <span class="math inline">\(\$p\)</span> per copy and sold at <span class="math inline">\(\$q\)</span> per copy, where <span class="math inline">\(q &gt; p\)</span>. Any unsold newspapers at the end of the day have no salvage value.</p>
+<p>Let <span class="math inline">\(a\)</span> denote the number of newspapers bought and <span class="math inline">\(W\)</span> denote the demand. If <span class="math inline">\(W &lt; a\)</span>, the newsvendor sells <span class="math inline">\(W\)</span> newspapers and earns <span class="math inline">\(qW - pa\)</span>; if <span class="math inline">\(W \ge a\)</span>, the newsvendor sells <span class="math inline">\(a\)</span> newspapers and earns <span class="math inline">\(qa - pa\)</span>. The reward is <span class="math inline">\(r(a,W)\)</span> where <span class="math display">\[\begin{equation} \label{eq:newsvendor-reward}
+r(a, w) =
+\begin{cases}
+   q w - p a, &amp; \text{if } w &lt; a, \\
+   q a - p a, &amp; \text{if } w \ge a.
+\end{cases}
+\end{equation}\]</span></p>
+</div>
+<section id="decision-trees" class="level3" data-number="1.2.1">
+<h3 data-number="1.2.1" class="anchored" data-anchor-id="decision-trees"><span class="header-section-number">1.2.1</span> Decision trees</h3>
+<p>When <span class="math inline">\(\ALPHABET S\)</span> and <span class="math inline">\(\ALPHABET A\)</span> are discrete, the simplest way to visualize stochastic optimization problems is using decision trees. As a concrete example, take prices <span class="math inline">\(p = 1\)</span>, <span class="math inline">\(q = 2\)</span>, action set <span class="math inline">\(\ALPHABET A = \{10, 20\}\)</span>, and demand supported on <span class="math inline">\(\ALPHABET W = \{5, 20\}\)</span> with <span class="math display">\[
+  \PR(W = 5) = \tfrac{1}{4}, \quad \PR(W = 20) = \tfrac{3}{4}.
+\]</span> The four reward values are then <span class="math display">\[
+  r(10,5)=0, \quad r(10,20)=10, \quad r(20,5)=-10, \quad r(20,20)=20.
+\]</span></p>
+<p>The optimization problem <span class="math inline">\(\eqref{eq:soc}\)</span> can be visualized as a <em>decision tree</em> shown in <a href="#fig-newsvendor-tree-basic" class="quarto-xref">Figure&nbsp;<span>1.1</span></a>:</p>
+<div id="fig-newsvendor-tree-basic" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-newsvendor-tree-basic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/newsvendor-tree-basic.svg" class="img-fluid figure-img" style="width:80.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-newsvendor-tree-basic-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1.1: Tree representation of the basic newsvendor. Blue square: decision node (choose <span class="math inline">\(a\)</span>). Green circles: chance nodes (nature draws <span class="math inline">\(W\)</span>). Terminal circles are labelled with the reward <span class="math inline">\(r(a,W)\)</span>.
+</figcaption>
+</figure>
+</div>
+<p>We use the following convention:</p>
+<ul>
+<li>a decision node (blue square) denotes nodes at which the decision maker acts.</li>
+<li>a chance node (green circle) denotes the nodes at which nature acts.</li>
+<li>the leaves are labelled by the realized reward <span class="math inline">\(r(a,W)\)</span>.</li>
+</ul>
+<p>In this simple problem, the tree has three layers: starting with decision node, then a chance node, and then the leaf nodes. Computing <span class="math inline">\(Q(a)\)</span> amounts to <em>simplifying the tree</em>. We start from the leave nodes, and go towards the root node.</p>
+<ul>
+<li>At a chance node, we average the values according to the probabilities.</li>
+<li>At a decision node, we pick an action to minimize (or maximize) the values.</li>
+</ul>
+<p>So, for the tree shown in <a href="#fig-newsvendor-tree-basic" class="quarto-xref">Figure&nbsp;<span>1.1</span></a>, we simplify the chance nodes to get <span class="math display">\[\begin{align*}
+  Q(10) &amp;= \tfrac{1}{4}(0) + \tfrac{3}{4}(10) = 7.5, \\
+  Q(20) &amp;= \tfrac{1}{4}(-10) + \tfrac{3}{4}(20) = 12.5.
+\end{align*}\]</span> This yields the reduced tree in <a href="#fig-newsvendor-tree-basic-simplified" class="quarto-xref">Figure&nbsp;<span>1.2</span></a>. Now we simplify the decision node to pick the value with the larger action to get <span class="math inline">\(a^\star = 20\)</span>.</p>
+<div id="fig-newsvendor-tree-basic-simplified" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-newsvendor-tree-basic-simplified-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/newsvendor-tree-basic-simplified.svg" class="img-fluid figure-img" style="width:55.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-newsvendor-tree-basic-simplified-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1.2: Simplified tree after averaging at the chance nodes. Each former chance node is replaced by the corresponding expected reward <span class="math inline">\(Q(a)\)</span>. The highlighted branch <span class="math inline">\(a=20\)</span> is optimal.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="the-continuous-version" class="level3" data-number="1.2.2">
+<h3 data-number="1.2.2" class="anchored" data-anchor-id="the-continuous-version"><span class="header-section-number">1.2.2</span> The continuous version</h3>
+<p>To build intuition beyond enumeration, suppose that both actions and demand are continuous. Let <span class="math inline">\(f\)</span> be the PDF and <span class="math inline">\(F\)</span> the CDF of the demand. The expected reward is <span class="math display">\[\begin{equation} \label{eq:Q-newsvendor}
+  Q(a) = \int_{0}^{a} (qw - pa)\, f(w)\, dw
+       + \int_{a}^{\infty} (qa - pa)\, f(w)\, dw.
+\end{equation}\]</span> A direct computation shows that <span class="math inline">\(d^2 Q(a)/da^2 = -q f(a) \le 0\)</span>, so <span class="math inline">\(Q\)</span> is <em>concave</em>. Setting the derivative equal to zero and using Leibniz’s rule yields the following classical result.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Detailed derivation
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Leibniz integral rule
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><span class="math display">\[
+  \dfrac{d}{dx} \left( \int_{p(x)}^{q(x)} f(x,t)\, dt \right)
+  = f(x, q(x)) \cdot \dfrac{d}{dx} q(x)
+  - f(x, p(x)) \cdot \dfrac{d}{dx} p(x)
+  + \int_{p(x)}^{q(x)} \dfrac{\partial}{\partial x} f(x,t)\, dt.
+\]</span></p>
+</div>
+</div>
+<p>To verify that <span class="math inline">\(Q\)</span> is concave, compute the second derivative: <span class="math display">\[
+  \frac{d^2 Q(a)}{da^2} = - p f(a) - (q - p) f(a) = -q f(a) \le 0.
+\]</span></p>
+<p>Using the Leibniz integral rule, the derivative of the first term of <span class="math inline">\(\eqref{eq:Q-newsvendor}\)</span> is <span class="math display">\[
+  [q a - p a ] f(a) + \int_{0}^a [ -p ] f(w)\, dw
+  = [q a - p a ] f(a) - p F(a).
+\]</span> Similarly, the derivative of the second term of <span class="math inline">\(\eqref{eq:Q-newsvendor}\)</span> is <span class="math display">\[
+  - [q a - p a] f(a) + \int_{a}^{\infty} (q-p)f(w)\,dw
+  = - [q a - p a] f(a) + (q - p)[ 1 - F(a)].
+\]</span> Combining the two, we get <span class="math display">\[
+  \dfrac{dQ(a)}{da} = - p F(a) + (q - p) [ 1 - F(a) ].
+\]</span> Equating this to <span class="math inline">\(0\)</span>, we get <span class="math display">\[
+  F(a) = \dfrac{ q - p }{ q}
+  \quad\text{or}\quad
+  a = F^{-1} \left( 1 - \dfrac{  p }{ q } \right).
+\]</span></p>
+</div>
+</div>
+</div>
+<div id="prp-newsvendor-cts" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 1.1</strong></span> For the newsvendor problem with continuous demand, the optimal action is <span class="math display">\[
+  a^\star = F^{-1}\!\left( 1 - \frac{p}{q} \right).
+\]</span> The quantity <span class="math inline">\(1 - p/q\)</span> is called the <strong>critical fractile</strong>.</p>
+</div>
+<p>The graphical interpretation is elegant: <em>draw the CDF of the demand; the optimal action is the point at which the CDF crosses the horizontal line <span class="math inline">\(1 - p/q\)</span></em>. Two special cases illustrate the formula.</p>
+<div id="exm-newsvendor-exponential" class="theorem example">
+<p><span class="theorem-title"><strong>Example 1.2</strong></span> If <span class="math inline">\(W\)</span> is exponential with mean <span class="math inline">\(θ\)</span>, then <span class="math inline">\(F(w) = 1 - e^{-w/θ}\)</span> and <span class="math display">\[
+  a^\star = θ \log(q/p).
+\]</span></p>
+</div>
+<div id="exm-newsvendor-uniform" class="theorem example">
+<p><span class="theorem-title"><strong>Example 1.3</strong></span> If <span class="math inline">\(W\)</span> is uniform on <span class="math inline">\([0,M]\)</span>, then <span class="math inline">\(F(w) = w/M\)</span> and <span class="math display">\[
+  a^\star = M\bigl(1 - p/q\bigr).
+\]</span></p>
+</div>
+</section>
+<section id="the-discrete-version" class="level3" data-number="1.2.3">
+<h3 data-number="1.2.3" class="anchored" data-anchor-id="the-discrete-version"><span class="header-section-number">1.2.3</span> The discrete version</h3>
+<p>For a general finite demand alphabet <span class="math inline">\(\ALPHABET W = \{w_1 &lt; w_2 &lt; \cdots &lt; w_k\}\)</span> with PMF <span class="math inline">\(\{μ_1, \dots, μ_k\}\)</span>. The argument based on derivatives no longer applies, but the <em>finite-difference</em> analogue works: comparing <span class="math inline">\(Q(w_{i+1})\)</span> and <span class="math inline">\(Q(w_i)\)</span> gives the following counterpart of <a href="#prp-newsvendor-cts" class="quarto-xref">Proposition&nbsp;<span>1.1</span></a>.</p>
+<div id="prp-newsvendor-discrete" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 1.2</strong></span> Let <span class="math inline">\(F\)</span> denote the CDF of the demand, so that <span class="math display">\[
+  F(w_i) = μ_1 + \cdots + μ_i.
+\]</span> The optimal action is the largest <span class="math inline">\(w_i\)</span> such that <span class="math display">\[
+  F(w_i) \le 1 - \frac{p}{q}.
+\]</span></p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Detailed derivation
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Write <span class="math inline">\(F_i \coloneqq F(w_i)\)</span> as shorthand. The expected reward for choice <span class="math inline">\(w_i\)</span> is <span class="math display">\[\begin{align*}
+  Q(w_i)
+  &amp;= \sum_{j &lt; i} μ_j [ q w_j - p w_i ] + \sum_{j \ge i} μ_j [q w_i - p w_i]
+  \\
+  &amp;= -p w_i + q \Bigl[ \sum_{j &lt; i}  μ_j w_j + \sum_{j \ge i} μ_j w_i \Bigr].
+\end{align*}\]</span> Thus, <span class="math display">\[\begin{align*}
+  Q(w_{i+1}) - Q(w_i)
+  &amp;= -p w_{i+1} + q \Bigl[ \sum_{j &lt; i+1}  μ_j w_j + \sum_{j \ge i+1} μ_j w_{i+1} \Bigr]
+  \\
+  &amp;\quad + p w_i - q \Bigl[ \sum_{j &lt; i}  μ_j w_j + \sum_{j \ge i} μ_j w_i \Bigr]
+  \\
+  &amp;= -p (w_{i+1} - w_i) + q \Bigl[ \sum_{j \ge i + 1} μ_j ( w_{i+1} - w_i) \Bigr]
+  \\
+  &amp;= \bigl( - p + q [ 1 - F_i ] \bigr) (w_{i+1} - w_i).
+\end{align*}\]</span> Note that <span class="math display">\[
+  F_i \le \dfrac{q-p}{q}
+  \iff -p + q [ 1 - F_i ] \ge 0.
+\]</span> Thus, for all <span class="math inline">\(i\)</span> such that <span class="math inline">\(F_i \le (q-p)/q\)</span>, we have <span class="math inline">\(Q(w_{i+1}) \ge Q(w_i)\)</span>. On the other hand, for all <span class="math inline">\(i\)</span> such that <span class="math inline">\(F_i &gt; (q-p)/q\)</span>, we have <span class="math inline">\(Q(w_{i+1}) &lt; Q(w_i)\)</span>. Therefore the optimal amount to order is the largest <span class="math inline">\(w_i\)</span> such that <span class="math inline">\(F(w_i) \le (q-p)/q\)</span>.</p>
+</div>
+</div>
+</div>
+<p>The graphical interpretation is identical to the continuous case: the optimal action is where the step CDF crosses <span class="math inline">\(1 - p/q\)</span>.</p>
+</section>
+<section id="acting-based-on-historical-data" class="level3" data-number="1.2.4">
+<h3 data-number="1.2.4" class="anchored" data-anchor-id="acting-based-on-historical-data"><span class="header-section-number">1.2.4</span> Acting based on historical data</h3>
+<p>In practice, the distribution <span class="math inline">\(F\)</span> of the demand is not known; only a data set <span class="math inline">\(\ALPHABET D_K = \{w^{(1)}, \dots, w^{(K)}\}\)</span> of past demands is available. A simple <em>certainty equivalence</em> approach is to replace <span class="math inline">\(F\)</span> by the empirical CDF <span class="math display">\[
+  \hat{F}_K(w) = \frac{1}{K} \sum_{k=1}^K \IND\{w^{(k)} \le w\}
+\]</span> and to solve the corresponding empirical problem <span class="math display">\[
+  \max_{a \in \ALPHABET A}
+    \frac{1}{K} \sum_{k=1}^K r(a, w^{(k)}).
+\]</span> This simple idea is known by different names in the literature: <strong>certainty equivalence</strong> in adaptive control, <strong>empirical risk minimization (ERM)</strong> in machine learning, and <strong>sample average approximation (SAA)</strong> in optimization.</p>
+<p>The structure of the optimal solution established in <a href="#prp-newsvendor-cts" class="quarto-xref">Proposition&nbsp;<span>1.1</span></a> and <a href="#prp-newsvendor-discrete" class="quarto-xref">Proposition&nbsp;<span>1.2</span></a> implies that the optimal action is the <span class="math inline">\(ρ\)</span>-th quantile of the demand distribution, where <span class="math inline">\(ρ = 1 - p/q\)</span> is the critical fractile. To obtain that, order the historical demands as <span class="math display">\[
+  w^{(1:K)} \le w^{(2:K)} \le \cdots \le w^{(K:K)}.
+\]</span> Then the certainty-equivalent action is <span class="math inline">\(w^{(\lceil ρ K \rceil:K)}\)</span>. This is the <strong>non-parametric approach</strong>: it makes no assumption about the form of the demand distribution.</p>
+<p>If instead we know that demand follows a specific parametric family, we can estimate its parameters from <span class="math inline">\(\ALPHABET D_K\)</span>. For example, if demand is exponential with unknown mean <span class="math inline">\(θ\)</span>, an unbiased estimator is the sample mean <span class="math display">\[
+  \hat{θ}_K = \frac{1}{K} \sum_{k=1}^K w^{(k)}.
+\]</span> Given <a href="#exm-newsvendor-exponential" class="quarto-xref">Example&nbsp;<span>1.2</span></a>, the certainty-equivalent action is <span class="math display">\[
+  a = \hat{θ}_K \log(q/p).
+\]</span> This is the <strong>parametric approach</strong>: it assumes a distributional form for the demand.</p>
+<p>If the exponential assumption is correct, both approaches converge to the same limit, and for small samples the parametric approach is typically more efficient. If the assumption is wrong, the parametric approach can perform poorly, so the non-parametric approach is more robust.</p>
+</section>
+</section>
+<section id="example-reliability-of-an-mpsoc" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="example-reliability-of-an-mpsoc"><span class="header-section-number">1.3</span> Example: reliability of an MPSoC</h2>
+<div id="exm-mpsoc-reliability" class="theorem example">
+<p><span class="theorem-title"><strong>Example 1.4</strong></span> Consider a Multi-Processor System on Chip (MPSoC) that requires at least one CPU and one RAM module to function properly. The chip has a total capacity for three components, so we can add redundancy to protect against component failure. There are two possible designs:</p>
+<ul>
+<li><strong>Design 1</strong> uses two CPUs and one RAM;</li>
+<li><strong>Design 2</strong> uses one CPU and two RAM modules.</li>
+</ul>
+<p>The lifetimes of the CPU and RAM are independent and modeled as exponential random variables with parameters <span class="math inline">\(λ_c\)</span> and <span class="math inline">\(λ_r\)</span>, respectively. When two identical components are present, they operate in <strong>cold standby</strong>: the backup activates only after the primary fails. A subsystem fails only once both components have ceased to function.</p>
+<p>Find the design that maximizes the expected lifetime (i.e., the mean time to failure) of the system.</p>
+</div>
+<p>We map this into <span class="math inline">\(\eqref{eq:soc}\)</span> by letting <span class="math inline">\(W = (W^1_c, W^2_c, W^1_r, W^2_r)\)</span> where <span class="math inline">\(W^i_c\)</span> and <span class="math inline">\(W^i_r\)</span> are the lifetimes of the <span class="math inline">\(i\)</span>-th CPU and RAM, and <span class="math inline">\(\ALPHABET A = \{1, 2\}\)</span>. The system lifetime under each design is <span class="math display">\[\begin{align*}
+  r(1, W) &amp;= \min\{ W^1_c + W^2_c,\, W^1_r \}, \\
+  r(2, W) &amp;= \min\{ W^1_c,\, W^1_r + W^2_r \},
+\end{align*}\]</span> and the optimal design maximizes <span class="math inline">\(Q(a) = \EXP[r(a,W)]\)</span>. It can be shown that <span class="math display">\[\begin{align*}
+  Q(1) = \EXP[r(1, W)] &amp;= \frac{2λ_c + λ_r}{(λ_c + λ_r)^2}, \\
+  Q(2) = \EXP[r(2, W)] &amp;= \frac{λ_c + 2λ_r}{(λ_c + λ_r)^2}.
+\end{align*}\]</span> Thus <strong>Design 1 is optimal iff <span class="math inline">\(λ_c &gt; λ_r\)</span></strong>, i.e., we should add redundancy to the <em>weakest</em> component (the one that fails faster).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Detailed derivation
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Two facts from elementary probability suffice:</p>
+<ul>
+<li>If <span class="math inline">\(X_1, X_2\)</span> are independent exponential with parameter <span class="math inline">\(λ\)</span>, then <span class="math inline">\(X_1 + X_2 \sim \text{Gamma}(2,λ)\)</span> and, in particular, <span class="math inline">\(\PR(X_1+X_2 &gt; t) = (1 + λ t) e^{-λ t}\)</span>.</li>
+<li>For non-negative independent random variables <span class="math inline">\(X, Y\)</span>, <span class="math inline">\(\EXP[\min\{X,Y\}] = \int_0^\infty \PR(X&gt;t)\, \PR(Y&gt;t)\, dt\)</span>.</li>
+</ul>
+<p>Combined with the integrals <span class="math inline">\(\int_0^\infty e^{-λ t}\,dt = 1/λ\)</span> and <span class="math inline">\(\int_0^\infty t e^{-λ t}\, dt = 1/λ^2\)</span>, we obtain <span class="math display">\[\begin{align*}
+  \EXP[r(1, W)]
+    &amp;= \int_0^\infty (1 + λ_c t) e^{-(λ_c + λ_r) t}\, dt
+     = \frac{2λ_c + λ_r}{(λ_c + λ_r)^2}, \\
+  \EXP[r(2, W)]
+    &amp;= \int_0^\infty (1 + λ_r t) e^{-(λ_c + λ_r) t}\, dt
+     = \frac{λ_c + 2λ_r}{(λ_c + λ_r)^2}.
+\end{align*}\]</span></p>
+</div>
+</div>
+</div>
+</section>
+<section id="stochastic-optimization-with-observations" class="level2" data-number="1.4">
+<h2 data-number="1.4" class="anchored" data-anchor-id="stochastic-optimization-with-observations"><span class="header-section-number">1.4</span> Stochastic optimization with observations</h2>
+<p>The problems so far assumed that the decision maker knows nothing beyond the prior distribution of <span class="math inline">\(W\)</span> before acting. In many applications the decision maker also observes some data that is informative about <span class="math inline">\(W\)</span>. We begin with a concrete example, then abstract the general theory.</p>
+<section id="the-newsvendor-with-weather-information" class="level3" data-number="1.4.1">
+<h3 data-number="1.4.1" class="anchored" data-anchor-id="the-newsvendor-with-weather-information"><span class="header-section-number">1.4.1</span> The newsvendor with weather information</h3>
+<p>We return to the newsvendor problem and assume that the newsvendor has additional information before they order.</p>
+<div id="exm-newsvendor-info" class="theorem example">
+<p><span class="theorem-title"><strong>Example 1.5 (Weather-aware newsvendor)</strong></span> The model is the same as the model of <a href="#exm-newsvendor" class="quarto-xref">Example&nbsp;<span>1.1</span></a>, but we assume that the demand distribution depends on the weather and that the newsvendor can observe the weather before making a decision:</p>
+<p>Let <span class="math inline">\(\ALPHABET S = \{\text{sunny}, \text{rainy}\}\)</span> denote different possibilities of the weather with <span class="math display">\[
+  \PR(S = \text{sunny}) = \PR(S = \text{rainy}) = \tfrac{1}{2}.
+\]</span> Demand still takes values in <span class="math inline">\(\{5, 20\}\)</span>, but now depends on the weather: <span class="math display">\[\begin{align*}
+  \PR(W = 5 \mid S = \text{sunny})  &amp;= \tfrac{1}{4},
+  &amp;\PR(W = 20 \mid S = \text{sunny})  &amp;= \tfrac{3}{4}, \\
+  \PR(W = 5 \mid S = \text{rainy}) &amp;= \tfrac{3}{4},
+  &amp;\PR(W = 20 \mid S = \text{rainy}) &amp;= \tfrac{1}{4}.
+\end{align*}\]</span> (In particular, the sunny conditional law is exactly the demand law of the basic instance.)</p>
+<p>Find the policy <span class="math inline">\(π\colon \ALPHABET S \to \ALPHABET A\)</span> that maximizes <span class="math inline">\(\EXP[r(S, π(S), W)]\)</span>.</p>
+</div>
+<p>The rewards are the same as in the basic instance above. There are only <span class="math inline">\(|\ALPHABET A|^{|\ALPHABET S|} = 4\)</span> policies to enumerate:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Policy <span class="math inline">\(π\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(π(\text{sunny})\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(π(\text{rainy})\)</span></th>
+<th style="text-align: center;"><span class="math inline">\(J(π)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(π_1\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(10\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(10\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(5.00\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(π_2\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(10\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(20\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(2.50\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(π_3\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(20\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(10\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(7.50\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(π_4\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(20\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(20\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(5.00\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The optimal policy is <span class="math inline">\(π_3\)</span>: <strong>order 20 papers on sunny days and 10 on rainy days</strong>.</p>
+<p>But this brute-force enumeration is unsatisfying: it does not scale, and it does not reveal any structure. A decision-tree view suggests a better procedure.</p>
+</section>
+<section id="a-tree-representation" class="level3" data-number="1.4.2">
+<h3 data-number="1.4.2" class="anchored" data-anchor-id="a-tree-representation"><span class="header-section-number">1.4.2</span> A tree representation</h3>
+<p>We already drew the basic newsvendor as a tree in <a href="#fig-newsvendor-tree-basic" class="quarto-xref">Figure&nbsp;<span>1.1</span></a>. With an observation <span class="math inline">\(S\)</span>, the same idea applies, but the decision node is no longer at the root: nature draws <span class="math inline">\(S\)</span> first, and only then does the decision maker act.</p>
+<p>For <a href="#exm-newsvendor-info" class="quarto-xref">Example&nbsp;<span>1.5</span></a> the resulting tree is <a href="#fig-newsvendor-tree-info" class="quarto-xref">Figure&nbsp;<span>1.3</span></a>. In particular, the sunny subtree is identical to <a href="#fig-newsvendor-tree-basic" class="quarto-xref">Figure&nbsp;<span>1.1</span></a>.</p>
+<div id="fig-newsvendor-tree-info" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-newsvendor-tree-info-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/newsvendor-tree-info.svg" class="img-fluid figure-img" style="width:100.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-newsvendor-tree-info-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1.3: Tree representation of the weather-aware newsvendor. Root: nature draws <span class="math inline">\(S\)</span>. Blue squares: decision nodes (after observing <span class="math inline">\(S\)</span>). Green circles: chance nodes (nature draws <span class="math inline">\(W \mid S\)</span>). Terminal circles are labelled with the reward <span class="math inline">\(r(a,W)\)</span>.
+</figcaption>
+</figure>
+</div>
+<p>Notice the structural feature: <strong>each observation value <span class="math inline">\(s\)</span> opens a completely separate subtree</strong>, and the two subtrees share no chance outcomes. We can therefore solve each weather subtree separately, exactly as in the basic newsvendor.</p>
+<p>Since the newsvendor maximizes reward, define <span class="math inline">\(Q(s, a) = \EXP[r(a,W) \mid S = s]\)</span> and maximize over <span class="math inline">\(a\)</span> for each weather <span class="math inline">\(s\)</span>. The sunny column reproduces the basic instance of <a href="#fig-newsvendor-tree-basic" class="quarto-xref">Figure&nbsp;<span>1.1</span></a>: <span class="math display">\[\begin{align*}
+  Q(\text{sunny}, 10)  &amp;= 7.5, &amp;&amp; \text{computed earlier} \\
+  Q(\text{sunny}, 20)  &amp;= 12.5, &amp;&amp; \text{computed earlier} \\
+  Q(\text{rainy}, 10)  &amp;= \tfrac{3}{4}(0) + \tfrac{1}{4}(10) = 2.5, \\
+  Q(\text{rainy}, 20)  &amp;= \tfrac{3}{4}(-10) + \tfrac{1}{4}(20) = -2.5.
+\end{align*}\]</span> This is equivalent to averaging the penultimate chance nodes of <a href="#fig-newsvendor-tree-info" class="quarto-xref">Figure&nbsp;<span>1.3</span></a> to obtain a reduced tree shown in <a href="#fig-newsvendor-tree-info-simplified" class="quarto-xref">Figure&nbsp;<span>1.4</span></a>.</p>
+<div id="fig-newsvendor-tree-info-simplified" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-newsvendor-tree-info-simplified-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/newsvendor-tree-info-simplified.svg" class="img-fluid figure-img" style="width:75.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-newsvendor-tree-info-simplified-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1.4: Reduced weather-aware tree after averaging at the <span class="math inline">\(W\)</span>-chance nodes. Each leaf is labelled by <span class="math inline">\(Q(s,a)\)</span>; highlighted branches are optimal at the corresponding decision node.
+</figcaption>
+</figure>
+</div>
+<p>Define the optimal value at the decision node and the optimal policy as <span class="math display">\[\begin{align*}
+  V^\star(\text{sunny}) &amp;= 12.5, &amp; π^\star(\text{sunny}) &amp;= 20, \\
+  V^\star(\text{rainy}) &amp;= 2.5, &amp; π^\star(\text{rainy}) &amp;= 10.
+\end{align*}\]</span> Optimizing at each decision node collapses the tree one more step to <a href="#fig-newsvendor-tree-info-value" class="quarto-xref">Figure&nbsp;<span>1.5</span></a>.</p>
+<div id="fig-newsvendor-tree-info-value" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-newsvendor-tree-info-value-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/newsvendor-tree-info-value.svg" class="img-fluid figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-newsvendor-tree-info-value-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1.5: Fully reduced weather-aware tree: each decision node is replaced by <span class="math inline">\(V^\star(s)\)</span>, and averaging at the root yields <span class="math inline">\(J(π^\star) = 7.5\)</span>.
+</figcaption>
+</figure>
+</div>
+<p>Averaging at the root then gives the performance of the optimal policy <span class="math display">\[
+  J(π^\star) = \tfrac{1}{2}(12.5) + \tfrac{1}{2}(2.5) = 7.5,
+\]</span> which matches <span class="math inline">\(π_3\)</span> from the enumeration above.</p>
+<p>The same steps work in general: first form conditional action values <span class="math inline">\(Q(s,a)\)</span>, then optimize separately for each observation. We now state this formally.</p>
+</section>
+</section>
+<section id="the-general-model-and-policy-optimization" class="level2" data-number="1.5">
+<h2 data-number="1.5" class="anchored" data-anchor-id="the-general-model-and-policy-optimization"><span class="header-section-number">1.5</span> The general model and policy optimization</h2>
+<section id="the-general-model" class="level3" data-number="1.5.1">
+<h3 data-number="1.5.1" class="anchored" data-anchor-id="the-general-model"><span class="header-section-number">1.5.1</span> The general model</h3>
+<p>Let <span class="math inline">\(W \in \ALPHABET W\)</span> denote the “state of the world” and <span class="math inline">\(S \in \ALPHABET S\)</span> an <strong>observation</strong> that the decision maker sees before choosing an action. The primitive random variables <span class="math inline">\((W, S)\)</span> are defined on a common probability space and have a <em>known joint distribution</em>. A <strong>decision rule</strong> (or <strong>policy</strong>) is a measurable map <span class="math display">\[ π \colon \ALPHABET S \to \ALPHABET A, \quad A = π(S). \]</span> We write <span class="math inline">\(Π\)</span> for the set of all such policies. Upon choosing the action <span class="math inline">\(A = π(S)\)</span>, the decision maker incurs cost <span class="math inline">\(c(S,A,W)\)</span>, and the expected cost of the policy <span class="math inline">\(π\)</span> is <span class="math display">\[
+  J(π) = \EXP\bigl[\, c(S, π(S), W) \,\bigr].
+\]</span> The stochastic optimization problem with observations is <span class="math display">\[\begin{equation} \label{eq:funcopt} \tag{P-Obs}
+  \min_{π \in Π} J(π).
+\end{equation}\]</span></p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Function optimization vs.&nbsp;parameter optimization
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Problem <span class="math inline">\(\eqref{eq:soc}\)</span> is a <strong>parameter optimization</strong> problem: the minimization is over a <em>point</em> <span class="math inline">\(a \in \ALPHABET A\)</span>.</p>
+<p>Problem <span class="math inline">\(\eqref{eq:funcopt}\)</span> is a <strong>function optimization</strong> problem: the minimization is over a <em>function</em> <span class="math inline">\(π \colon \ALPHABET S \to \ALPHABET A\)</span>.</p>
+<p>Even when <span class="math inline">\(\ALPHABET S\)</span> and <span class="math inline">\(\ALPHABET A\)</span> are finite, this is a big increase in complexity: there are <span class="math inline">\(|\ALPHABET A|^{|\ALPHABET S|}\)</span> policies to compare, and each policy evaluation requires an expectation. A brute-force search is infeasible even for modestly sized problems.</p>
+<p>As the weather example showed, <span class="math inline">\(\eqref{eq:funcopt}\)</span> can be reduced to a <em>collection</em> of parameter optimization problems <span class="math inline">\(\eqref{eq:greedy}\)</span>, one per observation value <span class="math inline">\(s\)</span>.</p>
+</div>
+</div>
+</section>
+<section id="policy-evaluation-and-optimization" class="level3" data-number="1.5.2">
+<h3 data-number="1.5.2" class="anchored" data-anchor-id="policy-evaluation-and-optimization"><span class="header-section-number">1.5.2</span> Policy evaluation and optimization</h3>
+<p>The weather example used an <strong>interim view</strong>: rather than picking a whole policy <span class="math inline">\(π\)</span> <em>before</em> seeing <span class="math inline">\(S\)</span> (the “ex ante” view), wait until <span class="math inline">\(S = s\)</span> is observed and then choose an action <span class="math inline">\(a\)</span> that optimizes the <em>conditional</em> expected cost. In general, define the <strong>action-value function</strong> <span class="math display">\[
+  Q(s, a) \coloneqq \EXP\bigl[\, c(s, a, W) \,\bigm|\, S = s \,\bigr]
+        = \sum_{w \in \ALPHABET W} \PR(W = w \mid S = s)\, c(s, a, w).
+\]</span></p>
+<p>The action-value functions can be used to evaluate the performance of a policy and identify the optimal policy:</p>
+<ol type="1">
+<li><p><strong>Policy evaluation.</strong> For any policy <span class="math inline">\(π \colon \ALPHABET S \to \ALPHABET A\)</span>, define the <strong>policy-value function</strong> <span class="math display">\[
+  V^π(s) = Q(s, π(s)).
+\]</span> The value functions are related to performance: <span class="math display">\[
+   J(π)
+   = \EXP\bigl[c(S,π(S),W)\bigr]
+   = \EXP\Bigl[ \EXP\bigl[ c(S,π(S),W) \bigm| S \bigr] \Bigr]
+   = \EXP\bigl[V^π(S)\bigr].
+\]</span></p></li>
+<li><p><strong>Policy optimization.</strong> Define the <strong>optimal value function</strong> <span class="math display">\[
+  V^\star(s) \coloneqq \min_{a \in \ALPHABET A} Q(s, a),
+\]</span> and the <strong>greedy policy</strong> <span class="math display">\[\begin{equation} \label{eq:greedy} \tag{P-Itm}
+  π^\star(s) \in \arg\min_{a \in \ALPHABET A} Q(s, a),
+\end{equation}\]</span> with ties broken arbitrarily. Then policy <span class="math inline">\(π^\star\)</span> is optimal.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-7" class="callout-7-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>Let <span class="math inline">\(π\)</span> be any arbitrary policy. Then, <span class="math display">\[
+  V^{π}(s) \stackrel{(a)}\ge V^\star(s) \stackrel{(b)}= V^{π^\star}(s)
+\]</span> where <span class="math inline">\((a)\)</span> follows from the definition of <span class="math inline">\(V^\star\)</span> and <span class="math inline">\((b)\)</span> follows from the definition of <span class="math inline">\(π^\star\)</span> in <span class="math inline">\(\eqref{eq:greedy}\)</span>. Taking expectation of both sides, we get <span class="math display">\[
+  J(π) \ge J(π^\star).
+\]</span> Since <span class="math inline">\(π\)</span> was arbitrary, this implies that <span class="math inline">\(π^\star\)</span> is optimal.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Measurable selection
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>The proof implicitly assumes that <span class="math inline">\(π^\star\)</span> is a measurable policy. This is not always the case when <span class="math inline">\(\ALPHABET S\)</span> and <span class="math inline">\(\ALPHABET A\)</span> are continuous valued. Sufficient conditions to ensure that <span class="math inline">\(π^\star\)</span> are measurable are called <strong>measurable selector theorems</strong>.</p>
+</div>
+</div>
+</div></li>
+<li><p><strong>Partial-converse</strong>. Let <span class="math inline">\(π^\circ\)</span> be any optimal policy. Then, for any <span class="math inline">\(s\)</span> such that <span class="math inline">\(\PR(S = s) &gt; 0\)</span>, <span class="math inline">\(π^\circ(s)\)</span> must satisfy <span class="math inline">\(\eqref{eq:greedy}\)</span>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-9" class="callout-9-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>Suppose <span class="math inline">\(π^\circ\)</span> violates <span class="math inline">\(\eqref{eq:greedy}\)</span> at some <span class="math inline">\(s^\circ\)</span> such that <span class="math inline">\(\PR(S = s^\circ) &gt; 0\)</span>, i.e, <span class="math inline">\(V^{π^\star}(s^\circ) &gt; V^\star(s^\circ)\)</span>. In the previous step, we have shown that every <span class="math inline">\(s\)</span> we still have <span class="math inline">\(V^{π^\circ}(s) \ge V^\star(s)\)</span>. Since <span class="math inline">\(\PR(S = s^\circ) &gt; 0\)</span>, these inequalities imply <span class="math display">\[
+  J(π^\circ) = \EXP\bigl[V^{π^\circ}(S)\bigr] &gt; \EXP\bigl[V^\star(S)\bigr] = J(π^\star),
+\]</span> contradicting the previous result that <span class="math inline">\(π^\star\)</span> is optimal.</p>
+</div>
+</div>
+</div></li>
+</ol>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>The conceptual and computational simplification
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Problem <span class="math inline">\(\eqref{eq:funcopt}\)</span> is a functional optimization problem. Brute-force search requires comparing <span class="math inline">\(|\ALPHABET A|^{|\ALPHABET S|}\)</span> policies.</p>
+<p>In contrast, Problem <span class="math inline">\(\eqref{eq:greedy}\)</span> is a parameteric optimization problem. Find the optimal policy requires solving <span class="math inline">\(|\ALPHABET S|\)</span> separate optimization problems of size <span class="math inline">\(|\ALPHABET A|\)</span>, which is a exponential reduction in complexity.</p>
+<p>This is the key idea that we will generalize to dynamic programming decomposition for multi-stage stochastic optimization problems.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="blackwells-principle-of-irrelevant-information" class="level2" data-number="1.6">
+<h2 data-number="1.6" class="anchored" data-anchor-id="blackwells-principle-of-irrelevant-information"><span class="header-section-number">1.6</span> Blackwell’s principle of irrelevant information</h2>
+<p>The policy optimization procedure told us how to <em>use</em> an observation optimally. We now ask a complementary question: are there observations we can <em>safely ignore</em>? The answer, due to David Blackwell, is a beautifully clean <em>conditional independence</em> condition.</p>
+<section id="a-motivating-example" class="level3" data-number="1.6.1">
+<h3 data-number="1.6.1" class="anchored" data-anchor-id="a-motivating-example"><span class="header-section-number">1.6.1</span> A motivating example</h3>
+<p>Let us extend <a href="#exm-newsvendor-info" class="quarto-xref">Example&nbsp;<span>1.5</span></a> by giving the newsvendor a second observation.</p>
+<div id="exm-newsvendor-blackwell" class="theorem example">
+<p><span class="theorem-title"><strong>Example 1.6 (Irrelevant observation)</strong></span> Alongside the weather <span class="math inline">\(S \in \{\text{sunny}, \text{rainy}\}\)</span>, the newsvendor also observes which side of the bed he got out of, <span class="math inline">\(Y \in \{\text{left}, \text{right}\}\)</span>. We assume that <span class="math inline">\(Y\)</span> is independent of <span class="math inline">\((S,W)\)</span>: getting out on the left or the right has nothing to do with the weather or the demand.</p>
+<p>Formally, <span class="math inline">\((S, Y, W)\)</span> are defined on a common probability space with <span class="math display">\[
+  \PR(S=\text{sunny})=\PR(S=\text{rainy}) = \tfrac{1}{2}, \quad
+  \PR(Y = \text{left}) = \PR(Y = \text{right}) = \tfrac{1}{2},
+\]</span> with <span class="math inline">\(Y \perp (S, W)\)</span> and <span class="math inline">\(\PR(W \mid S)\)</span> is exactly as in <a href="#exm-newsvendor-info" class="quarto-xref">Example&nbsp;<span>1.5</span></a>.</p>
+<p>Find the policy <span class="math inline">\(π \colon \ALPHABET S \times \ALPHABET Y \to \ALPHABET A\)</span> that maximizes <span class="math inline">\(\EXP[r(S, π(S, Y), W)]\)</span>.</p>
+</div>
+<p>The tree corresponding to <a href="#exm-newsvendor-blackwell" class="quarto-xref">Example&nbsp;<span>1.6</span></a> is <a href="#fig-newsvendor-tree-blackwell" class="quarto-xref">Figure&nbsp;<span>1.6</span></a>. Nature draws <span class="math inline">\((S, Y)\)</span> jointly; the decision maker sees both. There are four decision nodes at depth 1 (one for each <span class="math inline">\((s, y)\)</span> combination), and each has an identical <span class="math inline">\(W\mid S\)</span>-subtree.</p>
+<div id="fig-newsvendor-tree-blackwell" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-newsvendor-tree-blackwell-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/newsvendor-tree-blackwell.svg" class="img-fluid figure-img" style="width:100.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-newsvendor-tree-blackwell-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1.6: Tree representation of the weather-aware newsvendor with an additional observation <span class="math inline">\(Y\)</span> that is independent of <span class="math inline">\((S, W)\)</span>. The dashed boxes are information states: they group decision nodes that a policy which ignores <span class="math inline">\(Y\)</span> cannot distinguish. Blackwell’s principle says that the optimal policy can be chosen so that within each information state, the same action is taken at every node (i.e., the action depends only on <span class="math inline">\(S\)</span>).
+</figcaption>
+</figure>
+</div>
+<p>Two features of the tree stand out:</p>
+<ol type="1">
+<li>The two subtrees rooted at <span class="math inline">\((S = \text{sunny}, Y = \text{left})\)</span> and <span class="math inline">\((S = \text{sunny}, Y = \text{right})\)</span> are <em>structurally identical</em>: the conditional PMF of <span class="math inline">\(W\)</span> is the same, so the <span class="math inline">\(Q\)</span>-values are the same: <span class="math display">\[ Q(\text{sunny}, \text{left}, a) = Q(\text{sunny}, \text{right}, a), \quad a \in \ALPHABET A. \]</span> The same holds for the two “rainy” subtrees.</li>
+<li>Consequently, an optimal policy exists that returns the same action at both <span class="math inline">\((s, \text{left})\)</span> and <span class="math inline">\((s, \text{right})\)</span> (i.e., a policy that depends only on <span class="math inline">\(S\)</span>).</li>
+</ol>
+<p>The dashed <em>information states</em> in the figure encode this graphically: the optimal policy can be chosen to be <em>constant on each information state</em>. There is no loss of optimality in ignoring <span class="math inline">\(Y\)</span>.</p>
+<p>The condition that makes this work is not that <span class="math inline">\(Y\)</span> is <em>independent</em> of <span class="math inline">\(W\)</span>; it is the weaker condition that <span class="math inline">\(Y\)</span> is <em>conditionally</em> independent of <span class="math inline">\(W\)</span> given <span class="math inline">\(S\)</span>. Blackwell’s theorem captures exactly this.</p>
+</section>
+<section id="the-main-result" class="level3" data-number="1.6.2">
+<h3 data-number="1.6.2" class="anchored" data-anchor-id="the-main-result"><span class="header-section-number">1.6.2</span> The main result</h3>
+<div id="thm-blackwell" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 1.1 (Blackwell’s principle of irrelevant information)</strong></span> Let <span class="math inline">\(\ALPHABET S, \ALPHABET Y, \ALPHABET W, \ALPHABET A\)</span> be standard Borel spaces and <span class="math inline">\(S \in \ALPHABET S\)</span>, <span class="math inline">\(Y \in \ALPHABET Y\)</span>, <span class="math inline">\(W \in \ALPHABET W\)</span> random variables on a common probability space.</p>
+<p>Consider a decision maker who observes <span class="math inline">\((S, Y)\)</span> and chooses <span class="math inline">\(A = π(S, Y)\)</span> to minimize <span class="math inline">\(\EXP[c(S, A, W)]\)</span>, where <span class="math inline">\(c \colon \ALPHABET S \times \ALPHABET A \times \ALPHABET W \to \reals\)</span> is measurable.</p>
+<p><strong>If <span class="math inline">\(Y\)</span> is conditionally independent of <span class="math inline">\(W\)</span> given <span class="math inline">\(S\)</span>, then there is no loss of optimality in choosing <span class="math inline">\(A\)</span> as a function of <span class="math inline">\(S\)</span> alone</strong>: there exists <span class="math inline">\(π^\star \colon \ALPHABET S \to \ALPHABET A\)</span> such that <span class="math display">\[
+  \EXP\bigl[c(S, π^\star(S), W)\bigr]
+  \;\le\;
+  \EXP\bigl[c(S, π(S, Y), W)\bigr]
+  \quad \text{for every } π \colon \ALPHABET S \times \ALPHABET Y \to
+  \ALPHABET A.
+\]</span></p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>We prove the finite-alphabet case; the general Borel case follows by standard measurable-selection arguments (see <span class="citation" data-cites="Blackwell1964">Blackwell (<a href="#ref-Blackwell1964" role="doc-biblioref">1964</a>)</span>).</p>
+<p>Define the action-value function of the enlarged observation by <span class="math display">\[
+  Q(s, y, a) \coloneqq \EXP\bigl[c(s, a, W) \bigm| S = s, Y = y\bigr].
+\]</span> Because <span class="math inline">\(Y \perp W \mid S\)</span>, the conditional law of <span class="math inline">\(W\)</span> given <span class="math inline">\((S,Y)\)</span> depends on <span class="math inline">\(S\)</span> alone, so <span class="math display">\[
+  Q(s, y_1, a) = Q(s, y_2, a)
+  \quad\text{for all } y_1, y_2 \in \ALPHABET Y.
+\]</span> In particular, <span class="math inline">\(Q(s, y, a)\)</span> does not depend on <span class="math inline">\(y\)</span>, and we write <span class="math inline">\(\bar Q(s,a)\)</span> for its common value. The greedy policy for the enlarged problem may therefore be chosen independent of <span class="math inline">\(Y\)</span>: <span class="math display">\[
+  π^\star(s, y_1) = π^\star(s, y_2)
+  \in \arg\min_{a \in \ALPHABET A} \bar Q(s, a)
+  \quad\text{for all } y_1, y_2.
+\]</span> Thus there is an optimal policy that is a function of <span class="math inline">\(S\)</span> alone.</p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="main-takeaways" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="main-takeaways">Main takeaways</h2>
+<ol type="1">
+<li><p><strong>Stochastic optimization.</strong> Conceptually, a static problem is elementary: for each candidate action <span class="math inline">\(a\)</span>, compute the expected performance <span class="math inline">\(Q(a) = \EXP[c(a,W)]\)</span> and pick the best. The real difficulty is <em>computational</em>: evaluating those expectations may be hard, which is why approximations (including certainty equivalence) enter the picture.</p></li>
+<li><p><strong>Policy optimization.</strong> With observations, do the same thing <em>conditionally</em>: for each observation <span class="math inline">\(s\)</span>, compute <span class="math inline">\(Q(s,a)\)</span> for every action and choose a greedy action. This reduces function optimization over policies to a collection of ordinary parameter optimizations, one per <span class="math inline">\(s\)</span>.</p></li>
+<li><p><strong>Blackwell’s principle and information states.</strong> An observation that is conditionally independent of <span class="math inline">\(W\)</span> given <span class="math inline">\(S\)</span> can be ignored without loss of optimality. Equivalently, decision nodes that share the same conditional law of <span class="math inline">\(W\)</span> form a single <em>information state</em>, and an optimal policy may act as a function of that information state alone.</p></li>
+</ol>
+</section>
+<section id="exercises" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="exercises">Exercises</h2>
+<div id="exr-mpsoc-four-components" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 1.1 (MPSoC with four components)</strong></span> Extend <a href="#exm-mpsoc-reliability" class="quarto-xref">Example&nbsp;<span>1.4</span></a> to the case where the chip has a total capacity for four components. There are three possible designs:</p>
+<ul>
+<li>Design 1 uses three CPUs and one RAM;</li>
+<li>Design 2 uses two CPUs and two RAMs;</li>
+<li>Design 3 uses one CPU and three RAMs.</li>
+</ul>
+<p>Find the design that maximizes the expected lifetime of the system.</p>
+<p><em>Hint</em>: If <span class="math inline">\(X_1, X_2, X_3\)</span> are i.i.d. exponential with parameter <span class="math inline">\(λ\)</span>, then <span class="math inline">\(\PR(X_1 + X_2 + X_3 &gt; t) = \bigl(1 + λ t + (λ t)^2/2\bigr) e^{-λ t}\)</span>. Moreover, <span class="math inline">\(\int_0^\infty t^n e^{-λ t}\, dt = n!/λ^{n+1}\)</span>.</p>
+</div>
+<div id="exr-newsvendor-qualitative" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 1.2 (Qualitative properties of the optimal solution)</strong></span> For the newsvendor in <a href="#exm-newsvendor" class="quarto-xref">Example&nbsp;<span>1.1</span></a>, prove formally that if the purchase price <span class="math inline">\(p\)</span> increases while the selling price <span class="math inline">\(q\)</span> remains fixed, the optimal number of newspapers ordered decreases.</p>
+<p><em>Hint</em>: The CDF is a weakly increasing function.</p>
+</div>
+<div id="exr-newsvendor-stochastic-dominance" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 1.3 (Monotonicity under stochastic dominance)</strong></span> Consider the newsvendor with two demand distributions with CDFs <span class="math inline">\(F_1\)</span> and <span class="math inline">\(F_2\)</span> such that <span class="math inline">\(F_1(w) \le F_2(w)\)</span> for every <span class="math inline">\(w\)</span>. Show that the optimal action under <span class="math inline">\(F_1\)</span> is at least as large as under <span class="math inline">\(F_2\)</span>. The property <span class="math inline">\(F_1(w) \le F_2(w)\)</span> is called <em>first-order stochastic dominance</em>; we will meet it again in later lectures.</p>
+</div>
+<div id="exr-stoc-optim-computing" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 1.4 (Computing optimal policies)</strong></span> Let <span class="math inline">\(\ALPHABET S = \{1, 2\}\)</span>, <span class="math inline">\(\ALPHABET A = \{1, 2, 3\}\)</span>, and <span class="math inline">\(\ALPHABET W = \{1, 2, 3\}\)</span>. The joint distribution of <span class="math inline">\((S, W)\)</span> is <span class="math display">\[ P = \MATRIX{ 0.25 &amp; 0.15 &amp; 0.05 \\ 0.30 &amp; 0.10 &amp; 0.15 }, \]</span> where rows correspond to <span class="math inline">\(s\)</span> and columns to <span class="math inline">\(w\)</span>. The cost function <span class="math inline">\(c \colon \ALPHABET S \times \ALPHABET A \times \ALPHABET W \to \reals\)</span> is <span class="math display">\[
+c(\cdot,\cdot,1) = \MATRIX{3 &amp; 5 &amp; 1 \\ 2 &amp; 3 &amp; 1}, \quad
+c(\cdot,\cdot,2) = \MATRIX{4 &amp; 3 &amp; 1 \\ 1 &amp; 2 &amp; 8}, \quad
+c(\cdot,\cdot,3) = \MATRIX{1 &amp; 2 &amp; 2 \\ 4 &amp; 1 &amp; 3},
+\]</span> with rows indexed by <span class="math inline">\(s\)</span> and columns by <span class="math inline">\(a\)</span>.</p>
+<p>Find the policy <span class="math inline">\(π \colon \ALPHABET S \to \ALPHABET A\)</span> that minimizes <span class="math inline">\(\EXP[c(S, π(S), W)]\)</span>, and compute its expected cost.</p>
+</div>
+<div id="exr-stoc-optim-blackwell" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 1.5 (Blackwell’s principle)</strong></span> Let <span class="math inline">\(\ALPHABET S = \{1,2\}\)</span>, <span class="math inline">\(\ALPHABET Y = \{1,2\}\)</span>, <span class="math inline">\(\ALPHABET A = \{1,2,3\}\)</span>, <span class="math inline">\(\ALPHABET W = \{1,2,3\}\)</span>, and let <span class="math inline">\((S, Y, W)\)</span> have joint distribution <span class="math display">\[
+P_{Y=1} = \MATRIX{0.15 &amp; 0.10 &amp; 0.00 \\ 0.15 &amp; 0.05 &amp; 0.10},
+\quad
+P_{Y=2} = \MATRIX{0.10 &amp; 0.05 &amp; 0.05 \\ 0.15 &amp; 0.05 &amp; 0.05}.
+\]</span> (For each fixed <span class="math inline">\(y\)</span>, rows correspond to <span class="math inline">\(s\)</span> and columns to <span class="math inline">\(w\)</span>.) The cost function <span class="math inline">\(c\)</span> is the same as in the previous exercise.</p>
+<ol type="a">
+<li>Find the optimal policy <span class="math inline">\(π \colon \ALPHABET S \times \ALPHABET Y \to \ALPHABET A\)</span> that minimizes <span class="math inline">\(\EXP[c(S, π(S, Y), W)]\)</span>. b. Compare the solution with that of the previous exercise in view of Blackwell’s principle. Explain your observations. c.&nbsp;Repeat part (a) with the joint distribution <span class="math display">\[
+P_{Y=1} = \MATRIX{0.20 &amp; 0.12 &amp; 0.04 \\ 0.24 &amp; 0.08 &amp; 0.12},
+\quad
+P_{Y=2} = \MATRIX{0.05 &amp; 0.03 &amp; 0.01 \\ 0.06 &amp; 0.02 &amp; 0.03}.
+\]</span></li>
+</ol>
+</div>
+<div id="exr-stoc-optim-stochastic-policies" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 1.6 (Randomization does not help)</strong></span> Extend the definition of a policy to allow <em>randomization</em>: a randomized policy is a map <span class="math inline">\(π \colon \ALPHABET S \to \Delta(\ALPHABET A)\)</span>, and its performance is <span class="math display">\[
+   J(π) = \sum_{s, w} \sum_{a} P(s,w)\, π(a \mid s)\, c(s, a, w).
+\]</span> Show that the policy optimization procedure remains valid: there is a <em>deterministic</em> greedy policy that achieves the minimum over randomized policies.</p>
+<p><em>Note</em>. Randomization can improve performance in problems with constraints (e.g., risk or resource constraints); the result above is specific to unconstrained expected-cost minimization.</p>
+</div>
+</section>
+<section id="notes" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="notes">Notes</h2>
+<p>The newsvendor problem is one of the oldest problems in operations research; its earliest form appears in <span class="citation" data-cites="Edgeworth1888">Edgeworth (<a href="#ref-Edgeworth1888" role="doc-biblioref">1888</a>)</span> in the setting of a bank setting its cash reserves. The solution to the basic model and several of its variants was worked out in <span class="citation" data-cites="Morse1951">Morse and Kimball (<a href="#ref-Morse1951" role="doc-biblioref">1951</a>)</span>, <span class="citation" data-cites="Arrow1952">Arrow et al. (<a href="#ref-Arrow1952" role="doc-biblioref">1952</a>)</span>, and <span class="citation" data-cites="Whitin1953">Whitin (<a href="#ref-Whitin1953" role="doc-biblioref">1953</a>)</span>; <span class="citation" data-cites="Porteus2008">Porteus (<a href="#ref-Porteus2008" role="doc-biblioref">2008</a>)</span> offers an accessible modern introduction.</p>
+<p><a href="#thm-blackwell" class="quarto-xref">Theorem&nbsp;<span>1.1</span></a> is due to <span class="citation" data-cites="Blackwell1964">Blackwell (<a href="#ref-Blackwell1964" role="doc-biblioref">1964</a>)</span> in a short 2.5-page paper. A related result appears in <span class="citation" data-cites="Witsenhausen1979">Witsenhausen (<a href="#ref-Witsenhausen1979" role="doc-biblioref">1979</a>)</span>, who used it to establish the structure of optimal encoders in real-time communication. See also the <a href="https://infostructuralist.wordpress.com/2010/11/08/deadly-ninja-weapons-blackwells-principle-of-irrelevant-information/">blog post</a> by Maxim Raginsky for an accessible discussion.</p>
+<p>The tree representation of one-shot decision problems goes back to Kuhn’s foundational papers <span class="citation" data-cites="Kuhn1950 Kuhn1953">(<a href="#ref-Kuhn1950" role="doc-biblioref">1950</a>; <a href="#ref-Kuhn1953" role="doc-biblioref">1953</a>)</span>, where he introduced <em>information sets</em> in the context of multi-player multi-stage games.</p>
+</section>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-Arrow1952" class="csl-entry" role="listitem">
+<span class="smallcaps">Arrow, K.J., Harris, T., and Marschak, J.</span> 1952. Optimal inventory policy. <em>Econometrica</em> <em>20</em>, 1, 250–272. DOI: <a href="https://doi.org/10.2307/1907830">10.2307/1907830</a>.
+</div>
+<div id="ref-Blackwell1964" class="csl-entry" role="listitem">
+<span class="smallcaps">Blackwell, D.</span> 1964. Memoryless strategies in finite-stage dynamic programming. <em>The Annals of Mathematical Statistics</em> <em>35</em>, 2, 863–865. DOI: <a href="https://doi.org/10.1214/aoms/1177703586">10.1214/aoms/1177703586</a>.
+</div>
+<div id="ref-Edgeworth1888" class="csl-entry" role="listitem">
+<span class="smallcaps">Edgeworth, F.Y.</span> 1888. The mathematical theory of banking. <em>Journal of the Royal Statistical Society</em> <em>51</em>, 1, 113–127. Available at: <a href="https://www.jstor.org/stable/2979084">https://www.jstor.org/stable/2979084</a>.
+</div>
+<div id="ref-Kuhn1950" class="csl-entry" role="listitem">
+<span class="smallcaps">Kuhn, H.W.</span> 1950. Extensive games. <em>Proceedings of the National Academy of Sciences</em> <em>36</em>, 10, 570–576. DOI: <a href="https://doi.org/10.1073/pnas.36.10.570">10.1073/pnas.36.10.570</a>.
+</div>
+<div id="ref-Kuhn1953" class="csl-entry" role="listitem">
+<span class="smallcaps">Kuhn, H.W.</span> 1953. Extensive games and the problem of information. In: H.W. Kuhn and A.W. Tucker, eds., <em>Contributions to the theory of games</em>. Princeton University Press, 193–216.
+</div>
+<div id="ref-Morse1951" class="csl-entry" role="listitem">
+<span class="smallcaps">Morse, P. and Kimball, G.</span> 1951. <em>Methods of operations research</em>. Technology Press of MIT.
+</div>
+<div id="ref-Porteus2008" class="csl-entry" role="listitem">
+<span class="smallcaps">Porteus, E.L.</span> 2008. Building intuition: Insights from basic operations management models and principles. In: D. Chhajed and T.J. Lowe, eds., Springer, 115–134. DOI: <a href="https://doi.org/10.1007/978-0-387-73699-0">10.1007/978-0-387-73699-0</a>.
+</div>
+<div id="ref-Whitin1953" class="csl-entry" role="listitem">
+<span class="smallcaps">Whitin, S.</span> 1953. <em>The theory of inventory management</em>. Princeton University Press.
+</div>
+<div id="ref-Witsenhausen1979" class="csl-entry" role="listitem">
+<span class="smallcaps">Witsenhausen, H.S.</span> 1979. On the structure of real-time source coders. <em>bstj</em> <em>58</em>, 6, 1437–1451.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/adityam\.github\.io\/AIS-course\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../index.html" class="pagination-link" aria-label="Course outline">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Course outline</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../lectures/dynamic-programming.html" class="pagination-link" aria-label="Dynamic programming">
+        <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

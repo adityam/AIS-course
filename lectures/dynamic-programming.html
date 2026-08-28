@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="keywords" content="dynamic programming, state space models, MDPs, Bellman equation, Markov policies">
+<meta name="description" content="Lecture notes CNI Summer School 2026">
+
+<title>2&nbsp; Dynamic programming – Model approximation in MDPs and POMDPs</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../lectures/MDP-properties.html" rel="next">
+<link href="../lectures/static-optimization.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-610e5c2789cf4792c2c6ad2d8bcb67e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+// https://github.com/mathjax/MathJax/issues/2744#issuecomment-1658624747
+// To fix the bug that uppercase unicode letters are shown in italic
+window.MathJax = {
+  loader: {
+    load: ['[tex]/mathtools']
+  },
+  startup: {
+    ready() {
+      const {RANGES} = MathJax._.core.MmlTree.OperatorDictionary;
+      const {TEXCLASS} = MathJax._.core.MmlTree.MmlNode;
+      RANGES.splice(4, 1,
+        [0x0370, 0x0385, TEXCLASS.ORD, 'mi'],
+        [0x0386, 0x3AB, TEXCLASS.ORD, 'mi', 'normal'],
+        [0x03AC, 0x1A20, TEXCLASS.ORD, 'mi']
+      );
+      MathJax.startup.defaultReady();
+    }
+  },
+  tex: {
+    packages: {'[+]': ['mathtools']},
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+    processEscapes: true,
+    tags: "ams",
+    macros: {
+      PR: "\\mathbb{P}",
+      EXP: "\\mathbb{E}",
+      LEXP: "\\mathbb{L}",
+      "VAR": "\\operatorname{var}",
+      COV: "\\operatorname{cov}",
+      IND: "\\mathbb{1}",
+      ONES: "\\mathbf{1}",
+      reals: "\\mathbb{R}",
+      integers: "\\mathbb{Z}",
+      naturalnumbers: "\\mathbb{N}",
+      BLANK: "\\mathfrak{E}",
+      TRANS: "\\intercal",
+      BELLMAN: "\\mathcal{B}",
+      ENV: "\\mathcal{E}",
+      DYNAMICS: "\\mathcal{P}",
+      ADVANTAGE: "\\mathcal{A}",
+      RICCATI: "\\mathcal{R}",
+      GAIN: "\\mathcal{G}",
+      GREEDY: "\\mathcal{G}",
+      MISMATCH: "\\mathcal{D}",
+      VEC: "\\operatorname{vec}",
+      diag: "\\operatorname{diag}",
+      ROWS: "\\operatorname{vec}",
+      TR: "\\operatorname{Tr}",   
+      SPAN: "\\operatorname{sp}",   
+      DRE: "\\operatorname{DRE}",   
+      DARE: "\\operatorname{DARE}",   
+      LQR: "\\operatorname{LQR}",   
+      ALPHABET: ["\\mathcal{#1}", 1],
+      MATRIX: ["\\begin{bmatrix} #1 \\end{bmatrix}", 1],
+      NORM: ["\\left\\lVert \\mathstrut #1 \\right\\rVert", 1],
+      ABS: ["\\left\\lvert \\mathstrut #1 \\right\\rvert", 1],
+      SIZE: ["\\left\\lvert \\mathstrut \\ALPHABET #1 \\right\\rvert", 1],
+      GRAD: "\\nabla",
+      IP: ["\\left\\langle #1, #2 \\right\\rangle", 2]
+    },
+  },
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  },
+};
+</script>
+<script async="" data-id="101261731" src="//static.getclicky.com/js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../lectures/local.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../lectures/dynamic-programming.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Model approximation in MDPs and POMDPs</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course outline</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/static-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/dynamic-programming.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/MDP-properties.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Properties of value functions</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/model-approximation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Model approximation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/state-abstraction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">State abstraction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/sample-path-bounds.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sample-path bounds</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/pomdps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">POMDPs and information states</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/ais.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Approximate Information States</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/certainty-equivalence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Certainty equivalence in POMDPs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">From approximation bounds to learning</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#motivating-example-inventory-management" id="toc-motivating-example-inventory-management" class="nav-link" data-scroll-target="#motivating-example-inventory-management"><span class="header-section-number">2.1</span> Motivating example: Inventory management</a></li>
+  <li><a href="#backward-dynamic-programming-on-the-tree" id="toc-backward-dynamic-programming-on-the-tree" class="nav-link" data-scroll-target="#backward-dynamic-programming-on-the-tree"><span class="header-section-number">2.2</span> Backward dynamic programming on the tree</a>
+  <ul class="collapse">
+  <li><a href="#initialization-at-the-terminal-step" id="toc-initialization-at-the-terminal-step" class="nav-link" data-scroll-target="#initialization-at-the-terminal-step"><span class="header-section-number">2.2.1</span> Initialization: at the terminal step</a></li>
+  <li><a href="#at-the-decision-nodes-at-time-t2" id="toc-at-the-decision-nodes-at-time-t2" class="nav-link" data-scroll-target="#at-the-decision-nodes-at-time-t2"><span class="header-section-number">2.2.2</span> At the decision nodes at time <span class="math inline">\(t=2\)</span></a></li>
+  <li><a href="#at-the-chance-node-at-time-t1" id="toc-at-the-chance-node-at-time-t1" class="nav-link" data-scroll-target="#at-the-chance-node-at-time-t1"><span class="header-section-number">2.2.3</span> At the chance node at time <span class="math inline">\(t=1\)</span></a></li>
+  <li><a href="#at-the-decision-node-at-time-t1" id="toc-at-the-decision-node-at-time-t1" class="nav-link" data-scroll-target="#at-the-decision-node-at-time-t1"><span class="header-section-number">2.2.4</span> At the decision node at time <span class="math inline">\(t=1\)</span></a></li>
+  <li><a href="#the-optimal-policy" id="toc-the-optimal-policy" class="nav-link" data-scroll-target="#the-optimal-policy"><span class="header-section-number">2.2.5</span> The optimal policy</a></li>
+  </ul></li>
+  <li><a href="#the-general-multi-stage-model" id="toc-the-general-multi-stage-model" class="nav-link" data-scroll-target="#the-general-multi-stage-model"><span class="header-section-number">2.3</span> The general multi-stage model</a>
+  <ul class="collapse">
+  <li><a href="#dynamic-programming-decomposition" id="toc-dynamic-programming-decomposition" class="nav-link" data-scroll-target="#dynamic-programming-decomposition"><span class="header-section-number">2.3.1</span> Dynamic programming decomposition</a></li>
+  </ul></li>
+  <li><a href="#simplifications-of-the-dp" id="toc-simplifications-of-the-dp" class="nav-link" data-scroll-target="#simplifications-of-the-dp"><span class="header-section-number">2.4</span> Simplifications of the DP</a>
+  <ul class="collapse">
+  <li><a href="#independent-primitive-random-variables" id="toc-independent-primitive-random-variables" class="nav-link" data-scroll-target="#independent-primitive-random-variables"><span class="header-section-number">2.4.1</span> Independent primitive random variables</a></li>
+  <li><a href="#additive-per-step-costs" id="toc-additive-per-step-costs" class="nav-link" data-scroll-target="#additive-per-step-costs"><span class="header-section-number">2.4.2</span> Additive per-step costs</a></li>
+  <li><a href="#state-space-models" id="toc-state-space-models" class="nav-link" data-scroll-target="#state-space-models"><span class="header-section-number">2.4.3</span> State space models</a></li>
+  </ul></li>
+  <li><a href="#controlled-markov-chains" id="toc-controlled-markov-chains" class="nav-link" data-scroll-target="#controlled-markov-chains"><span class="header-section-number">2.5</span> Controlled Markov chains</a></li>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples">Examples</a></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+<div>
+  <div class="keywords">
+    <div class="block-title">Keywords</div>
+    <p>dynamic programming, state space models, MDPs, Bellman equation, Markov policies</p>
+  </div>
+</div>
+
+</header>
+
+
+<section id="overview" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="overview">Overview</h2>
+<p>In <a href="../lectures/static-optimization.html">Lecture 1</a> we considered static stochastic optimization: choose one action, possibly after seeing an observation. Now the decision maker acts repeatedly over time. To fix ideas, we start from a simple multi-stage version of the newsvendor problem.</p>
+</section>
+<section id="motivating-example-inventory-management" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="motivating-example-inventory-management"><span class="header-section-number">2.1</span> Motivating example: Inventory management</h2>
+<div id="exm-inventory" class="theorem example">
+<p><span class="theorem-title"><strong>Example 2.1 (Inventory management)</strong></span> Consider a store selling appliances (say, refrigerators). It has <span class="math inline">\(S_1\)</span> units in its stock, and before the store opens it can procure <span class="math inline">\(A_1\)</span> appliances from a supplier at a cost of <span class="math inline">\(p\)</span> per unit. We assume that there is no lead time and the supplier immediately delivers the appliances. During the day, there is a demand of <span class="math inline">\(W_1\)</span>. Let <span class="math inline">\(S_2 = S_1 + A_1 - W_1\)</span> denote the inventory at the end of the day.</p>
+<p>If <span class="math inline">\(S_2 &gt; 0\)</span>, then the store has to keep that inventory in its warehouse, which incurs a cost of <span class="math inline">\(c_h S_2\)</span>. If <span class="math inline">\(S_2 &lt; 0\)</span>, there is backlogged demand, which incurs a cost of <span class="math inline">\(-c_s S_2\)</span>. We denote this cost by <span class="math inline">\(h(S_2)\)</span>, where <span class="math display">\[ h(s) = \begin{cases}
+   c_h s, &amp; \text{if } s \ge 0 \\
+  -c_s s, &amp; \text{if } s &lt; 0
+\end{cases}\]</span></p>
+<p>The same process repeats on day 2. At the end of the second day, the store has incurred a total cost of <span class="math display">\[
+C(S_{1:3}, A_{1:2}, W_{1:2}) = p A_1 + h(S_2) + p A_2 + h(S_3).
+\]</span></p>
+<p>Let <span class="math inline">\(H_t = (S_{1:t}, A_{1:t-1}, W_{1:t-1})\)</span> denote all the information available to the decision maker before taking action <span class="math inline">\(A_t\)</span>. In general, the decision maker can choose <span class="math inline">\(A_t = π_t(H_t)\)</span>. Thus, the performance of policy <span class="math inline">\(π = (π_1, π_2)\)</span> is given by <span class="math display">\[
+  J(π) = \EXP^π[ C(S_{1:3}, A_{1:2}, W_{1:2}) ]
+\]</span> where <span class="math inline">\(\EXP^π[⋅]\)</span> means that actions <span class="math inline">\(A_t\)</span> are chosen according to <span class="math inline">\(π_t(H_t)\)</span>.</p>
+<p>The retail store wants to choose a policy <span class="math inline">\(π\)</span> to minimize <span class="math inline">\(J(π)\)</span>.</p>
+</div>
+<p>The above problem is a functional optimization problem. We will now show that using ideas from the previous lecture, it can be converted into a sequence of parametric optimization problems. To keep the analysis manageable, we assume that <span class="math display">\[
+  S_1 = 0, \quad A_t \in \{5, 10\}, \quad W_t \in \{5, 10\} \text{ equally likely}
+\]</span> and the cost parameters are <span class="math display">\[
+  p = 1, \quad c_h = 2, \quad c_s = 5.
+\]</span></p>
+<p>We can represent this decision problem on a decision tree, shown in <a href="#fig-inventory-tree-full" class="quarto-xref">Figure&nbsp;<span>2.1</span></a>.</p>
+<div id="fig-inventory-tree-full" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-full-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-full.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-full-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.1: Decision tree for the two-period inventory problem (<span class="math inline">\(T=2\)</span>, <span class="math inline">\(S_1 = 0\)</span>). Squares are decision nodes; circles are chance nodes (demand realizations). Terminal labels show the total cost <span class="math inline">\(C\)</span>.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="backward-dynamic-programming-on-the-tree" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="backward-dynamic-programming-on-the-tree"><span class="header-section-number">2.2</span> Backward dynamic programming on the tree</h2>
+<p>Recall the basic algorithm that we used in <a href="../lectures/static-optimization.html">Lecture 1</a>.</p>
+<ul>
+<li>Start reducing the tree starting from the leaf nodes.</li>
+<li>At chance nodes, average the values according to the probability of the alternatives.</li>
+<li>At decision nodes, choose the best alternative.</li>
+</ul>
+<p>The same idea works in the dynamic setting, but needs to be repeated multiple times.</p>
+<section id="initialization-at-the-terminal-step" class="level3" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="initialization-at-the-terminal-step"><span class="header-section-number">2.2.1</span> Initialization: at the terminal step</h3>
+<p>To avoid introducing more notation, we denote the penultimate chance nodes as <span class="math inline">\((H_2, A_2)\)</span> and define <span class="math display">\[
+  Q^\star_2(h_2, a_2) = \EXP[ C(h_2, a_2, W_2) ].
+\]</span></p>
+<p>Visually, this is shown in <a href="#fig-inventory-tree-full-Q2" class="quarto-xref">Figure&nbsp;<span>2.2</span></a></p>
+<div id="fig-inventory-tree-full-Q2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-full-Q2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-full-Q2.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-full-Q2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.2: Averaging at the penultimate chance nodes: each <span class="math inline">\(W_2\)</span>-fan is replaced by <span class="math inline">\(Q^\star_2(h_2,a_2)=\EXP[C(h_2,a_2,W_2)]\)</span>.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="at-the-decision-nodes-at-time-t2" class="level3" data-number="2.2.2">
+<h3 data-number="2.2.2" class="anchored" data-anchor-id="at-the-decision-nodes-at-time-t2"><span class="header-section-number">2.2.2</span> At the decision nodes at time <span class="math inline">\(t=2\)</span></h3>
+<p>Once the chance nodes are reduced, the penultimate node is a decision node. So, we choose the best alternative: <span class="math display">\[
+  V^\star_2(h_2) = \min_{a_2} Q^\star_2(h_2, a_2),
+  \qquad
+  π^\star_2(h_2) \in \arg\min_{a_2} Q^\star_2(h_2, a_2).
+\]</span> So we can remove the subtree starting from the penultimate nodes and attach value <span class="math inline">\(V^\star_2(h_2)\)</span> to the corresponding decision nodes. So, the tree folds, as shown in <a href="#fig-inventory-tree-full-V2" class="quarto-xref">Figure&nbsp;<span>2.3</span></a>.</p>
+<div id="fig-inventory-tree-full-V2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-full-V2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-full-V2.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-full-V2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.3: Choosing at the period-2 decision nodes: each subtree is replaced by <span class="math inline">\(V^\star_2(h_2)=\min_{a_2} Q^\star_2(h_2,a_2)\)</span>.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="at-the-chance-node-at-time-t1" class="level3" data-number="2.2.3">
+<h3 data-number="2.2.3" class="anchored" data-anchor-id="at-the-chance-node-at-time-t1"><span class="header-section-number">2.2.3</span> At the chance node at time <span class="math inline">\(t=1\)</span></h3>
+<p>Now the penultimate node is a chance node. So, we average over the values of <span class="math inline">\(W_1\)</span>. <span class="math display">\[
+  Q^\star_1(h_1, a_1) = \EXP\bigl[ V^\star_2(H_2) \bigr],
+\]</span> where <span class="math inline">\(H_2\)</span> is the history reached after <span class="math inline">\((h_1, a_1, W_1)\)</span>. Again, we remove the subtree starting from the penultimate nodes and attach the value <span class="math inline">\(Q^\star_1(h_1, a_1)\)</span> to the corresponding decision nodes. So, the tree folds, as shown in <a href="#fig-inventory-tree-full-Q1" class="quarto-xref">Figure&nbsp;<span>2.4</span></a>.</p>
+<div id="fig-inventory-tree-full-Q1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-full-Q1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-full-Q1.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-full-Q1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.4: Averaging at the period-1 chance nodes: each <span class="math inline">\(W_1\)</span>-fan is replaced by <span class="math inline">\(Q^\star_1(h_1,a_1)=\EXP[V^\star_2(H_2)]\)</span>.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="at-the-decision-node-at-time-t1" class="level3" data-number="2.2.4">
+<h3 data-number="2.2.4" class="anchored" data-anchor-id="at-the-decision-node-at-time-t1"><span class="header-section-number">2.2.4</span> At the decision node at time <span class="math inline">\(t=1\)</span></h3>
+<p>Once the chance nodes are reduced, the penultimate node is a decision node. So, we choose the best alternative: <span class="math display">\[
+  V^\star_1(h_1) = \min_{a_1} Q^\star_1(h_1, a_1),
+  \qquad
+  π^\star_1(h_1) \in \arg\min_{a_1} Q^\star_1(h_1, a_1).
+\]</span></p>
+<p>As before, this folds the tree, as shown in <a href="#fig-inventory-tree-full-V1" class="quarto-xref">Figure&nbsp;<span>2.5</span></a>.</p>
+<div id="fig-inventory-tree-full-V1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-full-V1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-full-V1.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-full-V1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.5: Choosing at the root: the tree folds to <span class="math inline">\(V^\star_1(h_1)=\min_{a_1} Q^\star_1(h_1,a_1)\)</span>.
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="the-optimal-policy" class="level3" data-number="2.2.5">
+<h3 data-number="2.2.5" class="anchored" data-anchor-id="the-optimal-policy"><span class="header-section-number">2.2.5</span> The optimal policy</h3>
+<p>Reading the optimal actions from the reduced tree gives the optimal policy <span class="math inline">\(π^\star = (π^\star_1, π^\star_2)\)</span>, which can be visualized as shown in <a href="#fig-inventory-tree-policy" class="quarto-xref">Figure&nbsp;<span>2.6</span></a>.</p>
+<div id="fig-inventory-tree-policy" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-policy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-policy.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-policy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.6: Optimal policy on the full tree. Yellow highlights mark the optimal branches and action labels at each decision node.
+</figcaption>
+</figure>
+</div>
+<p>Thus, by repeatedly applying the two basic steps from static optimization, we have converted the original functional optimization over policies to a sequence of parametric optimization problems.</p>
+</section>
+</section>
+<section id="the-general-multi-stage-model" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="the-general-multi-stage-model"><span class="header-section-number">2.3</span> The general multi-stage model</h2>
+<p>The same idea applies for a general multi-stage stochastic optimization problem running for a finite horizon <span class="math inline">\(T\)</span>. We present a general model, which can be viewed as an input-output system, with two inputs: a controlled input <span class="math inline">\(A_t\)</span> and a stochastic input <span class="math inline">\(W_t\)</span> and output <span class="math inline">\(Y_t\)</span>. We assume that the system starts with a state of nature <span class="math inline">\(W_0\)</span>, and that the decision maker (or agent) receives observations <span class="math display">\[
+  Y_t = f_t(A_{1:t-1}, W_{0:t-1}), \quad t \ge 1
+\]</span> for given sequence of functions <span class="math inline">\(\{f_t\}_{t\ge 1}\)</span>. Thus, the sequential order in which the variables are realized is <span class="math display">\[
+  W_0 \;\to\; Y_1 \;\to\; A_1 \;\to\; W_1 \;\to\; Y_2 \;\to\; A_2 \;\to\; \cdots \;\to\; Y_T \;\to\; A_T \;\to\; W_T.
+\]</span></p>
+<p>The variables <span class="math inline">\(\{W_0, \dots, W_T\}\)</span> are called the <strong>primitive random variables</strong> of the system. We do <strong>not</strong> assume that they are independent: the joint law of <span class="math inline">\((W_0,\dots,W_T)\)</span> may be arbitrary. All expectations below are therefore with respect to the <strong>conditional</strong> distribution of the next primitive given the information available so far.</p>
+<p>We assume <strong>perfect</strong> observations. Thus, the agent has access to the history <span class="math inline">\(H_t = (Y_{1:t}, A_{1:t-1}, W_{0:t-1})\)</span> when taking an action. Note that <span class="math inline">\(H_{t+1} = (H_t, Y_{t+1}, A_t, W_t)\)</span>, where <span class="math inline">\(Y_{t+1} = f_t(A_{1:t}, W_{0:t})\)</span>. For simplicity of notation, we write this as <span class="math display">\[
+  H_{t+1} = F_t(H_t, A_t, W_t).
+\]</span></p>
+<p>Let <span class="math inline">\(O_T = (H_T, A_T, W_T)\)</span> denote the <strong>outcome</strong> of the system. In the most general model we consider here, cost is incurred only at the end and may be written as a measurable function of that triple: <span class="math display">\[
+  C(H_T, A_T, W_T).
+\]</span></p>
+<p>A <strong>policy</strong> is a sequence <span class="math inline">\(π = (π_1, \dots, π_T)\)</span> of maps with <span class="math display">\[
+  A_t = π_t(H_t), \quad t \ge 1.
+\]</span> We use <span class="math inline">\(Π\)</span> to denote the set of all such (history-dependent) policies. The performance of any policy <span class="math inline">\(π \in Π\)</span> is given by <span class="math display">\[\begin{equation} \label{eq:performance}
+  J(π) = \EXP^π\bigl[ C(O_T) \bigr].
+\end{equation}\]</span> The optimization problem is to find a policy that solves <span class="math inline">\(\min_{π \in Π} J(π)\)</span>.</p>
+<section id="dynamic-programming-decomposition" class="level3" data-number="2.3.1">
+<h3 data-number="2.3.1" class="anchored" data-anchor-id="dynamic-programming-decomposition"><span class="header-section-number">2.3.1</span> Dynamic programming decomposition</h3>
+<ol type="1">
+<li><p>The main decomposition algorithm that we discovered for <a href="#exm-inventory" class="quarto-xref">Example&nbsp;<span>2.1</span></a> is called <strong>dynamic programming (DP)</strong>. It can be written succinctly as follows. Initialize <span class="math display">\[\begin{align}
+  Q^\star_T(h_T, a_T) &amp;= \EXP\bigl[ C(h_T, a_T, W_T) \bigm| H_T = h_T \bigr], \label{eq:QT-general} \\
+  V^\star_T(h_T) &amp;= \min_{a_T \in \ALPHABET A} Q^\star_T(h_T, a_T), \label{eq:VT-general} \\
+  π^\star_T(h_T) &amp;\in \arg\min_{a_T \in \ALPHABET A} Q^\star_T(h_T, a_T). \label{eq:piT-general}
+\end{align}\]</span> And then for <span class="math inline">\(t \in \{T-1, \dots, 1\}\)</span>, recursively compute <span class="math display">\[\begin{align}
+  Q^\star_t(h_t, a_t) &amp;= \EXP\bigl[ V^\star_{t+1}\bigl(F_t(h_t, a_t, W_t)\bigr) \bigm| H_t = h_t \bigr], \label{eq:Qt-general} \\
+  V^\star_t(h_t) &amp;= \min_{a_t \in \ALPHABET A} Q^\star_t(h_t, a_t), \label{eq:Vt-general} \\
+  π^\star_t(h_t) &amp;\in \arg\min_{a_t \in \ALPHABET A} Q^\star_t(h_t, a_t). \label{eq:pit-general}
+\end{align}\]</span> Equivalently, writing <span class="math inline">\(P(\,\cdot\mid H_t = h_t)\)</span> for the conditional law of <span class="math inline">\(W_t\)</span> given <span class="math inline">\(H_t = h_t\)</span>, <span class="math display">\[
+  Q^\star_t(h_t, a_t)
+  = \sum_{w} V^\star_{t+1}\bigl(F_t(h_t, a_t, w)\bigr)\, P(W_t = w \mid H_t = h_t),
+\]</span> and likewise at time <span class="math inline">\(T\)</span> with <span class="math inline">\(C(h_T,a_T,w)\)</span> in place of <span class="math inline">\(V^\star_{T+1}\)</span>.</p></li>
+<li><p>Given any policy <span class="math inline">\(π \in Π\)</span>, we can also evaluate its performance using <strong>DP for policy evaluation</strong>. It can be written as follows. Initialize <span class="math display">\[\begin{align}
+  Q^π_T(h_T, a_T) &amp;= \EXP\bigl[ C(h_T, a_T, W_T) \bigm| H_T = h_T \bigr], \label{eq:QT-eval} \\
+  V^π_T(h_T) &amp;= Q^π_T\bigl(h_T, π_T(h_T)\bigr), \label{eq:VT-eval}
+\end{align}\]</span> and then for <span class="math inline">\(t \in \{T-1, \dots, 1\}\)</span>, recursively compute <span class="math display">\[\begin{align}
+  Q^π_t(h_t, a_t) &amp;= \EXP\bigl[ V^π_{t+1}\bigl(F_t(h_t, a_t, W_t)\bigr) \bigm| H_t = h_t \bigr], \label{eq:Qt-eval} \\
+  V^π_t(h_t) &amp;= Q^π_t\bigl(h_t, π_t(h_t)\bigr). \label{eq:Vt-eval}
+\end{align}\]</span> In particular, <span class="math inline">\(J(π) = \EXP\bigl[ V^π_1(H_1) \bigr]\)</span>.</p></li>
+<li><p>The main result is that the policy <span class="math inline">\(π^\star = (π^\star_1, \dots, π^\star_T)\)</span> obtained from the DP is optimal. This can be proved via backward induction by showing that <span class="math display">\[
+   V^{π^\star}_t(h_t) = V^\star_t(h_t) \le V^π_t(h_t), \quad \forall t, h_t, \forall π \in Π.
+\]</span></p></li>
+</ol>
+</section>
+</section>
+<section id="simplifications-of-the-dp" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="simplifications-of-the-dp"><span class="header-section-number">2.4</span> Simplifications of the DP</h2>
+<p>The nested recursion above is valid in full generality. We now present some specializations that simplify the formulas.</p>
+<section id="independent-primitive-random-variables" class="level3" data-number="2.4.1">
+<h3 data-number="2.4.1" class="anchored" data-anchor-id="independent-primitive-random-variables"><span class="header-section-number">2.4.1</span> Independent primitive random variables</h3>
+<p>Suppose that the primitive random variables <span class="math inline">\(\{W_0,\dots,W_T\}\)</span> are <strong>independent</strong> (but not necessarily identically distributed). Then the conditional law of <span class="math inline">\(W_t\)</span> given <span class="math inline">\(H_t = h_t\)</span> does not depend on the past: <span class="math display">\[
+  P(W_t = w \mid H_t = h_t) = P(W_t = w).
+\]</span> Consequently, every conditional expectation in the DP reduces to an ordinary expectation with respect to the marginal of <span class="math inline">\(W_t\)</span>. In particular, <span class="math display">\[\begin{align*}
+  Q^\star_T(h_T, a_T)
+  &amp;= \EXP\bigl[ C(h_T, a_T, W_T) \bigr],
+  \\
+  Q^\star_t(h_t, a_t)
+  &amp;= \EXP\bigl[ V^\star_{t+1}\bigl(F_t(h_t, a_t, W_t)\bigr) \bigr],
+\end{align*}\]</span> and likewise for policy evaluation. Independence is the standing assumption in most classical MDP treatments; it is what justifies writing <span class="math inline">\(\EXP[\,\cdot\,]\)</span> without conditioning on <span class="math inline">\(H_t\)</span> in those formulas. The inventory tree in <a href="#fig-inventory-tree-full" class="quarto-xref">Figure&nbsp;<span>2.1</span></a> is already drawn under independent, equally likely demands.</p>
+</section>
+<section id="additive-per-step-costs" class="level3" data-number="2.4.2">
+<h3 data-number="2.4.2" class="anchored" data-anchor-id="additive-per-step-costs"><span class="header-section-number">2.4.2</span> Additive per-step costs</h3>
+<p>In many applications, including inventory management, the cost is incurred at each time step. In particular, the terminal cost decomposes as a sum of per-step costs along the trajectory: <span class="math display">\[\begin{equation} \label{eq:additive-cost}
+  C(O_T) = \sum_{t=1}^{T} c_t(H_t, A_t, W_t).
+\end{equation}\]</span> For instance, in <a href="#exm-inventory" class="quarto-xref">Example&nbsp;<span>2.1</span></a>, <span class="math inline">\(c_t = p A_t + h(S_{t+1})\)</span>.</p>
+<p>Each stage then contributes an <strong>instantaneous</strong> cost before the continuation. For such models, the DP simplifies further. To see that, we redraw the decision tree for the inventory management model with the per-step costs <span class="math inline">\(c_t\)</span> on the demand branches:</p>
+<div id="fig-inventory-tree-additive" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-additive-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-additive.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-additive-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.7: Inventory tree with additive per-step costs on the demand branches. Action edges show <span class="math inline">\(a\)</span>; demand edges show <span class="math inline">\((w,c)\)</span>, where <span class="math inline">\(c = p a + h(s+a-w)\)</span>. Leaves carry no separate total: the path cost is the sum of the <span class="math inline">\(c\)</span>-labels along the path.
+</figcaption>
+</figure>
+</div>
+<p>The DP decomposition proceeds as follows. Initialize <span class="math inline">\(V^\star_{T+1}(\cdot) \equiv 0\)</span>. For <span class="math inline">\(t = T, \dots, 1\)</span>, and under independence of the primitive random variables, <span class="math display">\[\begin{align}
+  Q^\star_t(h, a)
+    &amp;= \EXP\bigl[ c_t(h, a, W_t)
+         + V^\star_{t+1}\bigl(F_t(h, a, W_t)\bigr) \bigr],
+  \label{eq:Qt-additive} \\
+  V^\star_t(h)
+    &amp;= \min_{a \in \ALPHABET A} Q^\star_t(h, a),
+  \label{eq:Vt-additive} \\
+  π^\star_t(h)
+    &amp;\in \arg\min_{a \in \ALPHABET A} Q^\star_t(h, a).
+  \label{eq:pit-additive}
+\end{align}\]</span> Relative to the pure terminal-cost recursion, the only change is that <span class="math inline">\(c_t(h,a,W_t)\)</span> is charged at the current node (inside the same expectation as the continuation). Without independence, the same formulas hold with conditioning on <span class="math inline">\(H_t = h\)</span>.</p>
+</section>
+<section id="state-space-models" class="level3" data-number="2.4.3">
+<h3 data-number="2.4.3" class="anchored" data-anchor-id="state-space-models"><span class="header-section-number">2.4.3</span> State space models</h3>
+<p>Suppose there is a process <span class="math inline">\(\{S_t\}_{t \ge 1}\)</span> taking values in a set <span class="math inline">\(\ALPHABET S\)</span> such that <span class="math display">\[\begin{equation}
+  S_{t+1} = f_t(S_t, A_t, W_t),
+  \qquad
+  Y_t = S_t.
+  \label{eq:state-space-model}
+\end{equation}\]</span> Moreover, the total cost has an additive structure with the per-step cost <span class="math inline">\(c_t \colon \ALPHABET S \times \ALPHABET A \times \ALPHABET W \to \reals\)</span>, i.e., <span class="math display">\[\begin{equation}\label{eq:state-additive-cost}
+  C(O_T) = \sum_{t=1}^T c_t(S_t,A_t, W_t).
+\end{equation}\]</span> Finally, the primitive random variables are independent.</p>
+<p>For instance, the inventory management model considered above is of this form.</p>
+<div id="fig-inventory-tree-statespace" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inventory-tree-statespace-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/svg/inventory-tree-statespace.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inventory-tree-statespace-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.8: Same additive-cost inventory tree as <a href="#fig-inventory-tree-additive" class="quarto-xref">Figure&nbsp;<span>2.7</span></a>, with the two period-2 nodes that have <span class="math inline">\(S_2 = 0\)</span> highlighted. Their remaining subtrees are identical.
+</figcaption>
+</figure>
+</div>
+<p>Consider the two highlighted nodes in <a href="#fig-inventory-tree-statespace" class="quarto-xref">Figure&nbsp;<span>2.8</span></a>. They arise from different histories, but both have current state <span class="math inline">\(S_2 = 0\)</span>. From either node, the same actions are available, the demand <span class="math inline">\(W_2\)</span> has the same law, the next state is generated by the same dynamics, and the remaining cost has the same form. Consequently, the two subtrees are identical.</p>
+<p>Identical subtrees mean that the history-based action values agree: for every action <span class="math inline">\(a\)</span>, <span class="math display">\[\begin{equation*}
+  Q^\star_2(h,a) = Q^\star_2(h',a)
+\end{equation*}\]</span> at those two histories <span class="math inline">\(h\)</span> and <span class="math inline">\(h'\)</span>. Therefore the optimal values <span class="math inline">\(V^\star_2(h) = V^\star_2(h')\)</span> agree as well, and so do the optimal actions <span class="math display">\[\begin{equation*}
+  π^\star_2(h) \in \arg\min_a Q^\star_2(h,a),
+  \qquad
+  π^\star_2(h') \in \arg\min_a Q^\star_2(h',a).
+\end{equation*}\]</span> An optimal history-based policy may take the <strong>same</strong> action at every history that ends in the same stock. Equivalently: once the state is observed, the optimal decision is a function of the state alone.</p>
+<div id="thm-MDP-markov" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 2.1 (Optimal policies are Markov)</strong></span> In a state space model <span class="math inline">\(\eqref{eq:state-space-model}\)</span> with additive cost <span class="math inline">\(\eqref{eq:state-additive-cost}\)</span> and independent primitive random variables, the optimal action-value functions depend on <span class="math inline">\(h_t\)</span> only through the current state <span class="math inline">\(s_t\)</span>: <span class="math display">\[\begin{equation*}
+  Q^\star_t(h_t,a) = Q^\star_t(s_t,a).
+\end{equation*}\]</span> Consequently, <span class="math display">\[
+  V^\star_t(h_t) = V^\star_t(s_t)
+  \quad\text{and}
+  π^\star_t(h_t) = π^\star_t(s_t).
+\]</span> Such policies are often called <strong>Markov policies</strong>.</p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof of <a href="#thm-MDP-markov" class="quarto-xref">Theorem&nbsp;<span>2.1</span></a>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Fix additive costs and dynamics <span class="math inline">\(S_{t+1} = f_t(S_t,A_t,W_t)\)</span>. Proceed by backward induction on <span class="math inline">\(t\)</span>.</p>
+<p>At time <span class="math inline">\(T\)</span>, the history recursion <span class="math inline">\(\eqref{eq:Qt-additive}\)</span> gives <span class="math display">\[\begin{equation*}
+  Q^\star_T(h_T,a)
+  = \EXP\bigl[ c_T(S_T, a, W_T) \bigm| H_T = h_T,\, A_T = a \bigr].
+\end{equation*}\]</span> The right-hand side depends on <span class="math inline">\(h_T\)</span> only through <span class="math inline">\(S_T\)</span>, so <span class="math inline">\(Q^\star_T(h_T,a) = Q^\star_T(s_T,a)\)</span> and <span class="math inline">\(V^\star_T(h_T) = V^\star_T(s_T)\)</span>.</p>
+<p>Assume the claim holds at time <span class="math inline">\(t+1\)</span>: <span class="math inline">\(V^\star_{t+1}(h_{t+1}) = V^\star_{t+1}(s_{t+1})\)</span>. At time <span class="math inline">\(t\)</span>, <span class="math display">\[\begin{equation*}
+  Q^\star_t(h_t,a)
+  = \EXP\Bigl[
+    c_t(S_t,a,W_t)
+    + V^\star_{t+1}(H_{t+1})
+    \Bigm| H_t = h_t,\, A_t = a
+  \Bigr].
+\end{equation*}\]</span> Given <span class="math inline">\((S_t,A_t) = (s,a)\)</span>, the next state is <span class="math inline">\(S_{t+1} = f_t(s,a,W_t)\)</span>, and by the induction hypothesis <span class="math inline">\(V^\star_{t+1}(H_{t+1}) = V^\star_{t+1}(S_{t+1})\)</span>. Thus <span class="math display">\[\begin{equation*}
+  Q^\star_t(h_t,a)
+  = \EXP\Bigl[
+    c_t(s,a,W_t)
+    + V^\star_{t+1}\bigl(f_t(s,a,W_t)\bigr)
+    \Bigm| S_t = s,\, A_t = a
+  \Bigr],
+\end{equation*}\]</span> which depends on <span class="math inline">\(h_t\)</span> only through <span class="math inline">\(s\)</span>. Hence <span class="math inline">\(V^\star_t(h_t) = V^\star_t(s_t)\)</span> as well, and <span class="math display">\[\begin{equation*}
+  π^\star_t(h_t) \in \arg\min_a Q^\star_t(s_t,a)
+\end{equation*}\]</span> is a Markov choice. This completes the induction.</p>
+<p>The same conclusion is an instance of <a href="../lectures/static-optimization.html#thm-blackwell">Blackwell’s principle of irrelevant information</a>: once <span class="math inline">\(S_t\)</span> is known, the earlier coordinates of <span class="math inline">\(H_t\)</span> do not change the conditional law of the remaining cost-relevant variables <span class="math inline">\((W_t,\dots,W_T)\)</span> and of the future states generated from <span class="math inline">\(S_t\)</span>, so an optimal decision may ignore them.</p>
+</div>
+</div>
+</div>
+<p>Since <span class="math inline">\(Q^\star_t\)</span> and <span class="math inline">\(V^\star_t\)</span> are functions of the state, the history DP collapses to a recursion on <span class="math inline">\(\ALPHABET S\)</span>.</p>
+<p>Initialize <span class="math inline">\(V^\star_{T+1}(s) \equiv 0\)</span>. For <span class="math inline">\(t = T, T-1, \dots, 1\)</span>, <span class="math display">\[\begin{align}
+  Q^\star_t(s,a)
+  &amp;= \EXP\Bigl[
+    c_t(s, a, W_t)
+    + V^\star_{t+1}\bigl(f_t(s,a,W_t)\bigr)
+  \Bigr],
+  \label{eq:bellman-Q}
+  \\[0.5em]
+  V^\star_t(s)
+  &amp;= \min_{a \in \ALPHABET A} Q^\star_t(s,a),
+  \label{eq:bellman-V}
+  \\[0.5em]
+  π^\star_t(s)
+  &amp;\in \arg\min_{a \in \ALPHABET A} Q^\star_t(s,a).
+  \label{eq:bellman-pi}
+\end{align}\]</span></p>
+<p>For a fixed Markov policy <span class="math inline">\(π\)</span>, the same state recursion with <span class="math inline">\(\min\)</span> replaced by evaluation at <span class="math inline">\(π_t(s)\)</span> defines <span class="math inline">\(V^π_t\)</span> and <span class="math inline">\(Q^π_t\)</span>: <span class="math display">\[\begin{align}
+  Q^π_t(s,a)
+  &amp;= \EXP\Bigl[
+    c_t(s, a, W_t)
+    + V^π_{t+1}\bigl(f_t(s,a,W_t)\bigr)
+  \Bigr],
+  \label{eq:Qpi-state}
+  \\
+  V^π_t(s)
+  &amp;= Q^π_t\bigl(s, π_t(s)\bigr),
+  \label{eq:Vpi-state}
+\end{align}\]</span> with <span class="math inline">\(V^π_{T+1} \equiv 0\)</span>. Equivalently, <span class="math display">\[\begin{equation} \label{eq:policy-eval}
+  V^π_t(s) = \EXP\bigl[ c_t(s, π_t(s), W_t) + V^π_{t+1}\bigl(f_t(s, π_t(s), W_t)\bigr) \bigr].
+\end{equation}\]</span></p>
+</section>
+</section>
+<section id="controlled-markov-chains" class="level2" data-number="2.5">
+<h2 data-number="2.5" class="anchored" data-anchor-id="controlled-markov-chains"><span class="header-section-number">2.5</span> Controlled Markov chains</h2>
+<p>A common alternative for state space models, especially with finite state and action spaces, is to model them as controlled Markov chains. To fix ideas, we start with an example.</p>
+<div id="exm-peak-control" class="theorem example">
+<p><span class="theorem-title"><strong>Example 2.2 (Peak control)</strong></span> Consider a <em>controlled</em> Markov chain on <span class="math inline">\(\ALPHABET S = \{-2, -1, 0, 1, 2\}\)</span> with two actions, <span class="math inline">\(\ALPHABET A = \{0, 1\}\)</span>. If action <span class="math inline">\(A = 0\)</span> is chosen, the chain evolves according to its “natural” dynamics:</p>
+<div id="fig-peak1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-peak1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../mdps/figures/peak-control1.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-peak1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.9: “Natural” dynamics of the Markov chain
+</figcaption>
+</figure>
+</div>
+<p>When action <span class="math inline">\(A = 1\)</span> is chosen, the chain evolves according to the “forced” dynamics:</p>
+<div id="fig-peak2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-peak2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../../mdps/figures/peak-control2.svg" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-peak2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.10: “Forced” dynamics of the Markov chain
+</figcaption>
+</figure>
+</div>
+<p>Under the natural dynamics, the chain settles to a uniform steady-state distribution; under the forced dynamics, it settles to a unimodal distribution peaked at state <span class="math inline">\(0\)</span>.</p>
+<p>Suppose it is desirable to keep the chain close to state <span class="math inline">\(0\)</span>. We capture this by charging a <em>running cost</em> <span class="math inline">\(s^2\)</span> in state <span class="math inline">\(s\)</span>. Choosing <span class="math inline">\(A=0\)</span> is free, but choosing <span class="math inline">\(A=1\)</span> incurs a <em>correction cost</em> <span class="math inline">\(p\)</span>.</p>
+<p>Thus the decision maker is in a conundrum. It may allow the system to follow its natural dynamics, which tends to reach states with larger absolute value and incur running cost <span class="math inline">\(s^2\)</span>; or it may force the system toward state <span class="math inline">\(0\)</span>, which reduces the running cost but incurs the correction cost <span class="math inline">\(p\)</span>. How should it choose its actions?</p>
+</div>
+<p>Such models are naturally cast as <strong>controlled</strong> Markov chains because <span class="math inline">\(\{S_t\}_{t \ge 1}\)</span> satisfies the controlled Markov property: <span class="math display">\[
+  \PR(S_{t+1} = s_{t+1} \mid S_{1:t} = s_{1:t}, A_{1:t} = a_{1:t})
+  = \PR(S_{t+1} = s_{t+1} \mid S_t = s_t, A_t = a_t).
+\]</span> For finite state and action spaces, the right-hand side may be viewed as an entry of a <strong>controlled transition matrix</strong> <span class="math inline">\(P_t(a_t)\)</span>. For instance, in <a href="#exm-peak-control" class="quarto-xref">Example&nbsp;<span>2.2</span></a> we have <span class="math display">\[
+\def\1{\tfrac 12}
+P(0) = \MATRIX{ \1&amp; \1&amp;  0&amp;  0&amp;  0\\
+                \1&amp; 0 &amp; \1&amp;  0&amp;  0\\
+                0&amp;  \1&amp;  0&amp;  \1&amp; 0\\
+                0&amp;  0&amp;  \1&amp;   0&amp; \1 \\
+                0&amp;  0&amp;   0&amp;  \1&amp; \1}
+\quad\text{and}\quad
+\def\1{\tfrac 14}
+\def\2{\tfrac 34}
+\def\3{\tfrac 12}
+P(1) = \MATRIX{ \1&amp; \2&amp;  0&amp;  0&amp;  0\\
+                \1&amp; 0 &amp; \2&amp;  0&amp;  0\\
+                0&amp;  \1&amp; \3&amp;  \1&amp; 0\\
+                0&amp;  0&amp;  \2&amp;   0&amp; \1 \\
+                0&amp;  0&amp;   0&amp;  \2&amp; \1}
+\]</span> Since the model is time-homogeneous, we write <span class="math inline">\(P(a)\)</span> rather than <span class="math inline">\(P_t(a)\)</span>.</p>
+<p>In such models, it is common to model the per-step cost as <span class="math inline">\(c_t(S_t, A_t)\)</span> or <span class="math inline">\(c_t(S_t, A_t, S_{t+1})\)</span>. For example, in <a href="#exm-peak-control" class="quarto-xref">Example&nbsp;<span>2.2</span></a>, we have <span class="math inline">\(c_t(s,a) = s^2 + pa\)</span>, while in <a href="#exm-inventory" class="quarto-xref">Example&nbsp;<span>2.1</span></a>, we have <span class="math inline">\(c_t(s,a,s') = p a + h(s')\)</span>.</p>
+<p>This representation is compact and convenient for computational purposes, but I personally find it a bit opaque for proving the fundamental results of MDP theory. That is why we started with the <strong>functional model</strong>. However, we will use the controlled Markov chain representation when discussing structural properties of MDPs and approximation results.</p>
+</section>
+<section id="examples" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="examples">Examples</h2>
+<p>Unfortunately, we won’t have time to go into examples. But you are strongly encouraged to go over the following examples to become comfortable with MDP models:</p>
+<ul>
+<li><a href="https://adityam.github.io/stochastic-control/mdps/gambling.html">Optimal gambling</a></li>
+<li><a href="https://adityam.github.io/stochastic-control/mdps/inventory-management.html">Inventory management</a></li>
+<li><a href="https://adityam.github.io/stochastic-control/mdps/power-delay-tradeoff.html">Power control in wireless networks</a></li>
+</ul>
+</section>
+<section id="notes" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="notes">Notes</h2>
+<p>The inventory model is standard in operations research; see <a href="../../mdps/inventory-management.qmd">the inventory management notes</a> for structural results (base-stock policies) and the post-decision state formulation.</p>
+<p>The event-tree construction is classical in decision analysis; see <span class="citation" data-cites="Kuhn1950">Kuhn (<a href="#ref-Kuhn1950" role="doc-biblioref">1950</a>)</span> and <span class="citation" data-cites="Kuhn1953">Kuhn (<a href="#ref-Kuhn1953" role="doc-biblioref">1953</a>)</span> for the introduction of information sets in extensive-form games.</p>
+</section>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-Kuhn1950" class="csl-entry" role="listitem">
+<span class="smallcaps">Kuhn, H.W.</span> 1950. Extensive games. <em>Proceedings of the National Academy of Sciences</em> <em>36</em>, 10, 570–576. DOI: <a href="https://doi.org/10.1073/pnas.36.10.570">10.1073/pnas.36.10.570</a>.
+</div>
+<div id="ref-Kuhn1953" class="csl-entry" role="listitem">
+<span class="smallcaps">Kuhn, H.W.</span> 1953. Extensive games and the problem of information. In: H.W. Kuhn and A.W. Tucker, eds., <em>Contributions to the theory of games</em>. Princeton University Press, 193–216.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/adityam\.github\.io\/AIS-course\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../lectures/static-optimization.html" class="pagination-link" aria-label="Stochastic optimization">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../lectures/MDP-properties.html" class="pagination-link" aria-label="Properties of value functions">
+        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Properties of value functions</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

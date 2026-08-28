@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Lecture notes CNI Summer School 2026">
+
+<title>8&nbsp; Approximate Information States – Model approximation in MDPs and POMDPs</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../lectures/certainty-equivalence.html" rel="next">
+<link href="../lectures/pomdps.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-610e5c2789cf4792c2c6ad2d8bcb67e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+// https://github.com/mathjax/MathJax/issues/2744#issuecomment-1658624747
+// To fix the bug that uppercase unicode letters are shown in italic
+window.MathJax = {
+  loader: {
+    load: ['[tex]/mathtools']
+  },
+  startup: {
+    ready() {
+      const {RANGES} = MathJax._.core.MmlTree.OperatorDictionary;
+      const {TEXCLASS} = MathJax._.core.MmlTree.MmlNode;
+      RANGES.splice(4, 1,
+        [0x0370, 0x0385, TEXCLASS.ORD, 'mi'],
+        [0x0386, 0x3AB, TEXCLASS.ORD, 'mi', 'normal'],
+        [0x03AC, 0x1A20, TEXCLASS.ORD, 'mi']
+      );
+      MathJax.startup.defaultReady();
+    }
+  },
+  tex: {
+    packages: {'[+]': ['mathtools']},
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+    processEscapes: true,
+    tags: "ams",
+    macros: {
+      PR: "\\mathbb{P}",
+      EXP: "\\mathbb{E}",
+      LEXP: "\\mathbb{L}",
+      "VAR": "\\operatorname{var}",
+      COV: "\\operatorname{cov}",
+      IND: "\\mathbb{1}",
+      ONES: "\\mathbf{1}",
+      reals: "\\mathbb{R}",
+      integers: "\\mathbb{Z}",
+      naturalnumbers: "\\mathbb{N}",
+      BLANK: "\\mathfrak{E}",
+      TRANS: "\\intercal",
+      BELLMAN: "\\mathcal{B}",
+      ENV: "\\mathcal{E}",
+      DYNAMICS: "\\mathcal{P}",
+      ADVANTAGE: "\\mathcal{A}",
+      RICCATI: "\\mathcal{R}",
+      GAIN: "\\mathcal{G}",
+      GREEDY: "\\mathcal{G}",
+      MISMATCH: "\\mathcal{D}",
+      VEC: "\\operatorname{vec}",
+      diag: "\\operatorname{diag}",
+      ROWS: "\\operatorname{vec}",
+      TR: "\\operatorname{Tr}",   
+      SPAN: "\\operatorname{sp}",   
+      DRE: "\\operatorname{DRE}",   
+      DARE: "\\operatorname{DARE}",   
+      LQR: "\\operatorname{LQR}",   
+      ALPHABET: ["\\mathcal{#1}", 1],
+      MATRIX: ["\\begin{bmatrix} #1 \\end{bmatrix}", 1],
+      NORM: ["\\left\\lVert \\mathstrut #1 \\right\\rVert", 1],
+      ABS: ["\\left\\lvert \\mathstrut #1 \\right\\rvert", 1],
+      SIZE: ["\\left\\lvert \\mathstrut \\ALPHABET #1 \\right\\rvert", 1],
+      GRAD: "\\nabla",
+      IP: ["\\left\\langle #1, #2 \\right\\rangle", 2]
+    },
+  },
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  },
+};
+</script>
+<script async="" data-id="101261731" src="//static.getclicky.com/js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../lectures/local.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../lectures/ais.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Approximate Information States</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Model approximation in MDPs and POMDPs</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course outline</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/static-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Stochastic optimization</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/dynamic-programming.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Dynamic programming</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/MDP-properties.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Properties of value functions</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/model-approximation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Model approximation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/state-abstraction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">State abstraction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/sample-path-bounds.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sample-path bounds</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/pomdps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">POMDPs and information states</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/ais.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Approximate Information States</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/certainty-equivalence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Certainty equivalence in POMDPs</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../lectures/learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">From approximation bounds to learning</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#motivation" id="toc-motivation" class="nav-link active" data-scroll-target="#motivation"><span class="header-section-number">8.1</span> Motivation</a></li>
+  <li><a href="#the-history-based-mdp" id="toc-the-history-based-mdp" class="nav-link" data-scroll-target="#the-history-based-mdp"><span class="header-section-number">8.2</span> The history-based MDP</a></li>
+  <li><a href="#recall-state-abstraction" id="toc-recall-state-abstraction" class="nav-link" data-scroll-target="#recall-state-abstraction"><span class="header-section-number">8.3</span> Recall: state abstraction</a></li>
+  <li><a href="#approximate-information-state" id="toc-approximate-information-state" class="nav-link" data-scroll-target="#approximate-information-state"><span class="header-section-number">8.4</span> Approximate information state</a>
+  <ul class="collapse">
+  <li><a href="#ais-as-state-abstraction-of-the-history-based-mdp" id="toc-ais-as-state-abstraction-of-the-history-based-mdp" class="nav-link" data-scroll-target="#ais-as-state-abstraction-of-the-history-based-mdp"><span class="header-section-number">8.4.1</span> AIS as state abstraction of the history-based MDP</a></li>
+  <li><a href="#alternative-characterization-ap2aap2b" id="toc-alternative-characterization-ap2aap2b" class="nav-link" data-scroll-target="#alternative-characterization-ap2aap2b"><span class="header-section-number">8.4.2</span> Alternative characterization (AP2a)+(AP2b)</a></li>
+  </ul></li>
+  <li><a href="#approximate-dp-and-guarantees" id="toc-approximate-dp-and-guarantees" class="nav-link" data-scroll-target="#approximate-dp-and-guarantees"><span class="header-section-number">8.5</span> Approximate DP and guarantees</a></li>
+  <li><a href="#other-generalizations" id="toc-other-generalizations" class="nav-link" data-scroll-target="#other-generalizations"><span class="header-section-number">8.6</span> Other generalizations</a>
+  <ul class="collapse">
+  <li><a href="#stochastic-ais" id="toc-stochastic-ais" class="nav-link" data-scroll-target="#stochastic-ais"><span class="header-section-number">8.6.1</span> Stochastic AIS</a></li>
+  <li><a href="#observation-compression" id="toc-observation-compression" class="nav-link" data-scroll-target="#observation-compression"><span class="header-section-number">8.6.2</span> Observation compression</a></li>
+  <li><a href="#action-compression" id="toc-action-compression" class="nav-link" data-scroll-target="#action-compression"><span class="header-section-number">8.6.3</span> Action compression</a></li>
+  </ul></li>
+  <li><a href="#beyond-sup-norm-bounds" id="toc-beyond-sup-norm-bounds" class="nav-link" data-scroll-target="#beyond-sup-norm-bounds"><span class="header-section-number">8.7</span> Beyond sup-norm bounds</a>
+  <ul class="collapse">
+  <li><a href="#sample-path-bounds-for-ais" id="toc-sample-path-bounds-for-ais" class="nav-link" data-scroll-target="#sample-path-bounds-for-ais"><span class="header-section-number">8.7.1</span> Sample-path bounds for AIS</a></li>
+  </ul></li>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples"><span class="header-section-number">8.8</span> Examples</a>
+  <ul class="collapse">
+  <li><a href="#exact-information-state" id="toc-exact-information-state" class="nav-link" data-scroll-target="#exact-information-state"><span class="header-section-number">8.8.1</span> Exact information state</a></li>
+  <li><a href="#mdp-state-abstraction" id="toc-mdp-state-abstraction" class="nav-link" data-scroll-target="#mdp-state-abstraction"><span class="header-section-number">8.8.2</span> MDP state abstraction</a></li>
+  <li><a href="#belief-compression-in-pomdps" id="toc-belief-compression-in-pomdps" class="nav-link" data-scroll-target="#belief-compression-in-pomdps"><span class="header-section-number">8.8.3</span> Belief compression in POMDPs</a></li>
+  <li><a href="#observations-over-a-packet-drop-channel" id="toc-observations-over-a-packet-drop-channel" class="nav-link" data-scroll-target="#observations-over-a-packet-drop-channel"><span class="header-section-number">8.8.4</span> Observations over a packet-drop channel</a></li>
+  </ul></li>
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes">Notes</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Approximate Information States</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="motivation" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="motivation"><span class="header-section-number">8.1</span> Motivation</h2>
+<p>In the previous lecture, we showed that a partially observed problem admits a dynamic programming decomposition once an <strong>information state</strong> is available (<a href="pomdps.html#thm-info-state-dp" class="quarto-xref">Theorem&nbsp;<span>7.2</span></a>).</p>
+<p>In many practical scenarios, however, an exact information state is difficult to use, especially when the model is being learned. Useful exact compressions are rare. In a standard POMDP the natural information state is the belief <span class="math inline">\(b_t = \PR(S_t \mid H_t) \in Δ(\ALPHABET S)\)</span>, which is continuous and still hard to plan on; under learning one may not know the dynamics needed to run a Bayes filter to update the beliefs.</p>
+<p>In this lecture, we characterize the features required of an information state in approximate form, and then use the model-approximation / state-abstraction results of Lecture&nbsp;5 to quantify the error incurred when planning with an <strong>approximate information state</strong> (AIS). The starting point is that <span class="math inline">\(\{H_t\}\)</span> itself forms a <strong>history-based MDP</strong>. An AIS is then a (time-varying) state abstraction of that MDP, so the mismatch / IPM bounds of Lecture&nbsp;5 apply with <span class="math inline">\(\ALPHABET S_t = \ALPHABET H_t\)</span>.</p>
+</section>
+<section id="the-history-based-mdp" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="the-history-based-mdp"><span class="header-section-number">8.2</span> The history-based MDP</h2>
+<p>We use the finite-horizon partially observed model of Lecture&nbsp;7. Observations and actions generate the history <span class="math display">\[
+  H_t = (Y_{1:t}, A_{1:t-1}),
+\]</span> which updates as <span class="math display">\[
+  H_{t+1} = (H_t, A_t, Y_{t+1}).
+\]</span> A policy is a sequence <span class="math inline">\(π = (π_1,\dots,π_T)\)</span> with <span class="math inline">\(A_t = π_t(H_t)\)</span>. With additive costs <span class="math inline">\(C(O_T) = \sum_{t=1}^T C_t\)</span>, the history DP of <a href="pomdps.html#thm-pomdp-history-dp" class="quarto-xref">Theorem&nbsp;<span>7.1</span></a> is <span class="math display">\[\begin{align*}
+  Q^\star_t(h_t, a_t)
+  &amp;= \EXP\bigl[
+    C_t + V^\star_{t+1}(H_{t+1})
+    \bigm| H_t = h_t,\, A_t = a_t
+  \bigr],
+  \\
+  V^\star_t(h_t)
+  &amp;= \min_{a_t \in \ALPHABET A} Q^\star_t(h_t, a_t),
+\end{align*}\]</span> with <span class="math inline">\(V^\star_{T+1} \equiv 0\)</span>.</p>
+<p>This recursion is exactly the MDP dynamic program on the <strong>growing</strong> state space <span class="math inline">\(\{\ALPHABET H_t\}_{t=1}^T\)</span>: the next history is a controlled Markov kernel on <span class="math inline">\(\ALPHABET H_{t+1}\)</span>, and the per-step cost is the conditional expectation <span class="math inline">\(\EXP[C_t \mid H_t, A_t]\)</span>. Call this the <strong>history-based MDP</strong>.</p>
+<p>An exact information state <span class="math inline">\(\{σ_t\}\)</span> (<a href="pomdps.html#thm-info-state-dp" class="quarto-xref">Theorem&nbsp;<span>7.2</span></a>) is an <strong>exact</strong> state abstraction of that MDP: properties (P1)–(P2) say that costs and next-summary laws factor through <span class="math inline">\(Z_t = σ_t(H_t)\)</span>, so the mismatch of Lecture&nbsp;5 is identically zero. Approximate information states relax the same two properties.</p>
+</section>
+<section id="recall-state-abstraction" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="recall-state-abstraction"><span class="header-section-number">8.3</span> Recall: state abstraction</h2>
+<p>We briefly recall the Lecture&nbsp;5 dictionary; details and proofs live in the state-abstraction lecture.</p>
+<p>Given a surjection <span class="math inline">\(φ \colon \ALPHABET S \to \hat{\ALPHABET S}\)</span>, lift any function <span class="math inline">\(\hat f\)</span> on the abstract space by <span class="math inline">\(\hat f \circ φ\)</span>. Lifting is non-expansive (<a href="state-abstraction.html#lem-lift" class="quarto-xref">Lemma&nbsp;<span>5.1</span></a>). For models <span class="math inline">\(\ALPHABET M\)</span> and <span class="math inline">\(\widehat{\ALPHABET M}\)</span> on different state spaces, the <strong>mismatch operator</strong> is <span class="math display">\[
+  \hat\MISMATCH_t \hat v
+  = \ENV_t(\hat v \circ φ) - (\hat\ENV_t \hat v) \circ φ.
+\]</span> One-step, policy, and value errors are controlled by <span class="math inline">\(\NORM{\hat\MISMATCH_t \hat v}\)</span> (<a href="state-abstraction.html#prp-value-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.2</span></a>). Let <span class="math inline">\(\def\F{\mathfrak{F}}\F\)</span> be an IPM function class as in Lectures&nbsp;3–5, with distance <span class="math inline">\(d_{\F}\)</span> and Minkowski functional <span class="math inline">\(ρ_{\F}\)</span>. When the approximation is measured by <span class="math inline">\(d_{\F}\)</span>, <span class="math display">\[
+  \NORM{\hat\MISMATCH_t \hat v}
+  \le ε_{φ,t} + \hat δ_{φ,t}\, ρ_{\F}(\hat v)
+\]</span> (<a href="state-abstraction.html#lem-IPM-bound-on-mismatch-abstract" class="quarto-xref">Lemma&nbsp;<span>5.3</span></a>), and the lifted abstract-optimal policy is within a factor-two sum of those one-step errors (<a href="state-abstraction.html#thm-model-error-IPM-abstract" class="quarto-xref">Theorem&nbsp;<span>5.2</span></a>).</p>
+<p>Nothing in those theorems required <span class="math inline">\(\ALPHABET S\)</span> to be a “physical” state. They apply equally with <span class="math inline">\(\ALPHABET S_t = \ALPHABET H_t\)</span> and a time-dependent abstraction <span class="math inline">\(\hat σ_t\)</span> (finite horizon makes time dependence harmless).</p>
+</section>
+<section id="approximate-information-state" class="level2" data-number="8.4">
+<h2 data-number="8.4" class="anchored" data-anchor-id="approximate-information-state"><span class="header-section-number">8.4</span> Approximate information state</h2>
+<p>Fix Banach spaces <span class="math inline">\(\{\ALPHABET Z_t\}_{t=1}^T\)</span>, a function class <span class="math inline">\(\F\)</span>, and tolerances <span class="math inline">\(\{(ε_t,δ_t)\}_{t=1}^T\)</span>.</p>
+<div id="def-ais" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 8.1 (Approximate information state generator)</strong></span> A collection <span class="math inline">\(\{\hat σ_t, \hat c_t, \hat P_t\}_{t=1}^T\)</span>, with <span class="math display">\[
+  \hat σ_t \colon \ALPHABET H_t \to \ALPHABET Z_t,
+  \quad
+  \hat c_t \colon \ALPHABET Z_t \times \ALPHABET A \to \reals,
+  \quad
+  \hat P_t \colon \ALPHABET Z_t \times \ALPHABET A \to Δ(\ALPHABET Z_{t+1}),
+\]</span> is an <span class="math inline">\(\{(ε_t,δ_t)\}\)</span>-<strong>AIS generator</strong> if <span class="math inline">\(Z_t = \hat σ_t(H_t)\)</span> satisfies the following for every policy <span class="math inline">\(π\)</span>, every history <span class="math inline">\(h_t\)</span>, and every action <span class="math inline">\(a_t\)</span>:</p>
+<p><strong>(AP1) Approximate cost evaluation.</strong> <span class="math display">\[
+  \ABS{
+    \EXP^π[C_t \mid H_t = h_t,\, A_t = a_t]
+    - \hat c_t\bigl(\hat σ_t(h_t), a_t\bigr)
+  }
+  \le ε_t,
+\]</span> where <span class="math inline">\(\hat c_t\bigl(\hat σ_t(h_t), a_t\bigr)\)</span> does not depend on <span class="math inline">\(π\)</span>.</p>
+<p><strong>(AP2) Approximate self-prediction.</strong> Writing <span class="math display">\[
+  μ^π_t(\,\cdot\,)
+    = \PR^π\bigl(Z_{t+1} \in \cdot \bigm| H_t = h_t,\, A_t = a_t\bigr),
+  \quad
+  ν_t(\,\cdot\,)
+  = \hat P_t\bigl(\,\cdot \mid \hat σ_t(h_t), a_t\bigr),
+\]</span> we have <span class="math inline">\(d_{\F}(μ^π_t, ν_t) \le δ_t\)</span>, where <span class="math inline">\(ν_t\)</span> does not depend on <span class="math inline">\(π\)</span>.</p>
+</div>
+<p>We often say that “<span class="math inline">\(\{Z_t\}_{t \ge 1}\)</span> is an <span class="math inline">\((ε,δ)\)</span>-AIS” when the generators are clear from context.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Finite spaces
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In general Borel models one also requires measurable optimal selectors for the approximate MDP on <span class="math inline">\(\ALPHABET Z_t\)</span>. For <strong>finite</strong> <span class="math inline">\(\ALPHABET Z_t\)</span> and <span class="math inline">\(\ALPHABET A\)</span> this is automatic, so we omit a separate measurable-selection hypothesis in this lecture and in Lecture&nbsp;9.</p>
+</div>
+</div>
+<section id="ais-as-state-abstraction-of-the-history-based-mdp" class="level3" data-number="8.4.1">
+<h3 data-number="8.4.1" class="anchored" data-anchor-id="ais-as-state-abstraction-of-the-history-based-mdp"><span class="header-section-number">8.4.1</span> AIS as state abstraction of the history-based MDP</h3>
+<p>Set <span class="math inline">\(φ = \hat σ_t\)</span> (time-dependent) and take the abstract model <span class="math display">\[
+  \widehat{\ALPHABET M}_t
+  = \bigl\langle \ALPHABET Z_t,\, \ALPHABET A,\, \hat P_t,\, \hat c_t \bigr\rangle.
+\]</span> Then (AP1)–(AP2) are exactly the cost and pushed-forward transition errors of an <span class="math inline">\((ε_t,δ_t)\)</span>-approximation of the history-based MDP. Consequently <a href="state-abstraction.html#lem-IPM-bound-on-mismatch-abstract" class="quarto-xref">Lemma&nbsp;<span>5.3</span></a> gives <span class="math display">\[
+  \NORM{\hat\MISMATCH_t \hat v}
+  \le ε_t + δ_t\, ρ_{\F}(\hat v)
+\]</span> for every abstract continuation <span class="math inline">\(\hat v\)</span>.</p>
+</section>
+<section id="alternative-characterization-ap2aap2b" class="level3" data-number="8.4.2">
+<h3 data-number="8.4.2" class="anchored" data-anchor-id="alternative-characterization-ap2aap2b"><span class="header-section-number">8.4.2</span> Alternative characterization (AP2a)+(AP2b)</h3>
+<p>As with exact information states, (AP2) can be replaced by a deterministic update plus approximate observation prediction.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Sufficient conditions for (AP2)
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>(AP2a) State-like update.</strong> There exist maps <span class="math inline">\(\hat φ_t\)</span> such that <span class="math display">\[
+  Z_{t+1} = \hat φ_t\bigl(Z_t, A_t, Y_{t+1}\bigr).
+\]</span></p>
+<p><strong>(AP2b) Approximate observation prediction.</strong> There exist measurable observation prediction kernels <span class="math inline">\(\{\hat P^Y_t \colon \ALPHABET Z_t \times \ALPHABET A \to Δ(\ALPHABET Y)\}\)</span> such that for every policy <span class="math inline">\(π\)</span>, every history <span class="math inline">\(h_t\)</span>, and every action <span class="math inline">\(a_t\)</span>, writing <span class="math display">\[
+  μ^{Y,π}_t(\,\cdot\,)
+  = \PR^π\bigl(Y_{t+1} \in \cdot \bigm| H_t = h_t,\, A_t = a_t\bigr),
+  \quad
+  ν^Y_t(\,\cdot\,)
+  = \hat P^Y_t\bigl(\,\cdot \mid \hat σ_t(h_t), a_t\bigr),
+\]</span> we have <span class="math display">\[
+  d_{\F}\bigl(μ^{Y,π}_t,\, ν^Y_t\bigr)
+  \le \frac{δ_t}{κ_{\F}(\hat φ_t)},
+\]</span> where <span class="math inline">\(κ_{\F}(\hat φ_t)\)</span> is defined as <span class="math display">\[
+  κ_{\F}(\hat φ_t)
+  = \sup_{h_t \in \ALPHABET H_t,\, a_t \in \ALPHABET A}
+  κ_{\F}\bigl(\hat φ_t(\hat σ_t(h_t), a_t, \cdot)\bigr).
+\]</span> Note that for the total variation distance <span class="math inline">\(κ_{\F}(\hat φ_t) = 1\)</span>; for the Kantorovich distance <span class="math inline">\(κ_{\F}(\hat φ_t)\)</span> is equal to the Lipschitz uniform bound on the Lipschitz constant of <span class="math inline">\(\hat φ_t\)</span> with respect to <span class="math inline">\(y_t\)</span>. Finally, <span class="math inline">\(ν^Y_t\)</span> (equivalently <span class="math inline">\(\hat P^Y_t(\,\cdot \mid \hat σ_t(h_t), a_t)\)</span>) does not depend on <span class="math inline">\(π\)</span>.</p>
+</div>
+</div>
+<div id="prp-ais-AP2" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 8.1 ((AP2a) and (AP2b) imply (AP2))</strong></span> If <span class="math inline">\((\hat σ_t, \hat c_t, \hat φ_t, \hat P^Y_t)\)</span> satisfy (AP1), (AP2a), and (AP2b), then the pushforward kernel <span class="math display">\[
+  \hat P_t(B \mid z, a)
+  = \int \IND\bigl\{\hat φ_t(z, a, y) \in B\bigr\}\,
+  \hat P^Y_t(dy \mid z, a)
+\]</span> satisfies (AP2) with the same <span class="math inline">\(δ_t\)</span>. Thus <span class="math inline">\(\{(\hat σ_t, \hat c_t, \hat φ_t, \hat P^Y_t)\}\)</span> is an AIS generator in the sense of (AP1)–(AP2).</p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>Fix a policy <span class="math inline">\(π\)</span>, a history <span class="math inline">\(h_t\)</span>, and an action <span class="math inline">\(a_t\)</span>, and write <span class="math inline">\(z_t = \hat σ_t(h_t)\)</span>. By the law of total probability and (AP2a), the measures <span class="math inline">\(μ^π_t\)</span> and <span class="math inline">\(ν_t\)</span> in (AP2) are the pushforwards of <span class="math inline">\(μ^{Y,π}_t\)</span> and <span class="math inline">\(ν^Y_t\)</span> under <span class="math inline">\(y \mapsto \hat φ_t(z_t, a_t, y)\)</span>: <span class="math display">\[\begin{align*}
+  μ^π_t(B)
+  &amp;= \int \IND\bigl\{\hat φ_t(z_t, a_t, y) \in B\bigr\}\, μ^{Y,π}_t(dy),
+  \\
+  ν_t(B)
+  &amp;= \int \IND\bigl\{\hat φ_t(z_t, a_t, y) \in B\bigr\}\, ν^Y_t(dy).
+\end{align*}\]</span> Thus, for any real-valued function <span class="math inline">\(f\)</span> on <span class="math inline">\(\ALPHABET Z_{t+1}\)</span>, <span class="math display">\[\begin{align*}
+  \int f\, dμ^π_t
+  &amp;= \int f\bigl(\hat φ_t(z_t, a_t, y)\bigr)\, μ^{Y,π}_t(dy),
+  \\
+  \int f\, dν_t
+  &amp;= \int f\bigl(\hat φ_t(z_t, a_t, y)\bigr)\, ν^Y_t(dy).
+\end{align*}\]</span> Therefore, for every <span class="math inline">\(f \in \F\)</span>, <span class="math display">\[\begin{align*}
+  \ABS{\int f\, dμ^π_t - \int f\, dν_t}
+  &amp;= \ABS{
+    \int f\bigl(\hat φ_t(z_t, a_t, y)\bigr)\, μ^{Y,π}_t(dy)
+    - \int f\bigl(\hat φ_t(z_t, a_t, y)\bigr)\, ν^Y_t(dy)
+  }
+  \\
+  &amp;\le κ_{\F}\bigl(\hat φ_t(z_t, a_t, \cdot)\bigr)\,
+  d_{\F}(μ^{Y,π}_t, ν^Y_t),
+\end{align*}\]</span> where the inequality is the contraction property of IPMs used to define <span class="math inline">\(κ_{\F}\)</span> above. Taking the supremum over <span class="math inline">\(f \in \F\)</span> and using the definition of <span class="math inline">\(κ_{\F}(\hat φ_t)\)</span> together with (AP2b) yields <span class="math display">\[
+  d_{\F}(μ^π_t, ν_t)
+  \le κ_{\F}(\hat φ_t)\, d_{\F}(μ^{Y,π}_t, ν^Y_t)
+  \le κ_{\F}(\hat φ_t) \cdot \frac{δ_t}{κ_{\F}(\hat φ_t)}
+  = δ_t,
+\]</span> which is (AP2).</p>
+</div>
+</div>
+</div>
+<p>This matches the (P2a)/(P2b) pattern of Lecture&nbsp;7 (<a href="pomdps.html#prp-info-state-P2" class="quarto-xref">Proposition&nbsp;<span>7.1</span></a>), with IPM slack in the observation channel.</p>
+</section>
+</section>
+<section id="approximate-dp-and-guarantees" class="level2" data-number="8.5">
+<h2 data-number="8.5" class="anchored" data-anchor-id="approximate-dp-and-guarantees"><span class="header-section-number">8.5</span> Approximate DP and guarantees</h2>
+<p>Given an AIS generator, define the <strong>abstract Bellman recursion</strong> by <span class="math inline">\(\hat V^\star_{T+1} \equiv 0\)</span> and, for <span class="math inline">\(t = T,\dots,1\)</span>, <span class="math display">\[\begin{align}
+  \hat Q^\star_t(z, a)
+  &amp;= \hat c_t(z, a)
+  + \EXP_{\hat P_t}\bigl[\hat V^\star_{t+1}(Z_{t+1}) \bigm| Z_t = z,\, A_t = a\bigr],
+  \label{eq:ais-Qt} \\
+  \hat V^\star_t(z)
+  &amp;= \min_{a \in \ALPHABET A} \hat Q^\star_t(z, a).
+  \label{eq:ais-Vt}
+\end{align}\]</span> Let <span class="math inline">\(\hat π^\star_t(z) \in \arg\min_a \hat Q^\star_t(z, a)\)</span>, and lift to histories by <span class="math inline">\(π_t = \hat π^\star_t \circ \hat σ_t\)</span>.</p>
+<p>As in Lecture&nbsp;5, the one-step discrepancy between the history-based MDP and the abstract model is measured by the <strong>mismatch operator</strong> with <span class="math inline">\(φ = \hat σ_t\)</span>: <span class="math display">\[
+  \hat\MISMATCH_t \hat v
+  = \ENV_t(\hat v \circ \hat σ_t) - (\hat\ENV_t \hat v) \circ \hat σ_t.
+\]</span></p>
+<div id="thm-ais-approx-dp" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 8.1 (Approximate DP for an AIS)</strong></span> Suppose <span class="math inline">\(\{\hat σ_t, \hat c_t, \hat P_t\}\)</span> is an AIS generator, and define <span class="math inline">\((\hat Q^\star_t, \hat V^\star_t)\)</span> by <span class="math inline">\(\eqref{eq:ais-Qt}\)</span>–<span class="math inline">\(\eqref{eq:ais-Vt}\)</span>. Set <span class="math inline">\(α_{T+1} = 0\)</span> and <span class="math display">\[
+  α_t
+  = \sum_{\tau=t}^{T} \NORM{\hat\MISMATCH_τ \hat V^\star_{τ+1}},
+  \qquad t = T,\dots,1.
+\]</span> Then, for every history <span class="math inline">\(h_t\)</span> and action <span class="math inline">\(a_t\)</span>:</p>
+<ol type="1">
+<li><p><strong>Value error.</strong> <span class="math display">\[
+  \ABS{Q^\star_t(h_t,a_t) - \hat Q^\star_t\bigl(\hat σ_t(h_t), a_t\bigr)}
+  \le α_t,
+  \qquad
+  \ABS{V^\star_t(h_t) - \hat V^\star_t\bigl(\hat σ_t(h_t)\bigr)}
+  \le α_t.
+\]</span></p></li>
+<li><p><strong>Model approximation error.</strong> The lifted greedy policy <span class="math inline">\(π_t = \hat π^\star_t \circ \hat σ_t\)</span> is <span class="math inline">\(2α_t\)</span>-optimal: for every history <span class="math inline">\(h_t\)</span> and action <span class="math inline">\(a_t\)</span>, <span class="math display">\[
+  0
+  \le Q^π_t(h_t,a_t) - Q^\star_t(h_t,a_t)
+  \le 2α_t,
+  \qquad
+  0
+  \le V^π_t(h_t) - V^\star_t(h_t)
+  \le 2α_t.
+\]</span></p></li>
+</ol>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>This is <a href="state-abstraction.html#prp-value-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.2</span></a> and <a href="state-abstraction.html#thm-model-error-hat-V-star-abstract" class="quarto-xref">Theorem&nbsp;<span>5.1</span></a> specialized to the history-based MDP with <span class="math inline">\(φ_t = \hat σ_t\)</span> (and with the <span class="math inline">\(\hat V^\star\)</span>-sided choice of one-step error).</p>
+</div>
+</div>
+</div>
+<p>The AIS axioms control the mismatch through the IPM bound of Lecture&nbsp;5.</p>
+<div id="cor-ais-ipm" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary 8.1 (IPM form)</strong></span> If <span class="math inline">\(\{\hat σ_t, \hat c_t, \hat P_t\}\)</span> is an <span class="math inline">\(\{(ε_t,δ_t)\}\)</span>-AIS generator, then <a href="state-abstraction.html#lem-IPM-bound-on-mismatch-abstract" class="quarto-xref">Lemma&nbsp;<span>5.3</span></a> gives <span class="math display">\[
+  \NORM{\hat\MISMATCH_t \hat V^\star_{t+1}}
+  \le ε_t + δ_t\, ρ_{\F}(\hat V^\star_{t+1}).
+\]</span> Consequently the envelopes of <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a> satisfy <span class="math display">\[
+  α_t
+  \le \sum_{\tau=t}^{T}
+  \bigl(
+    ε_τ + ρ_{\F}(\hat V^\star_{τ+1})\, δ_τ
+  \bigr),
+\]</span> or, recursively, <span class="math inline">\(α_{T+1} = 0\)</span> and <span class="math display">\[
+  α_t \le ε_t + ρ_{\F}(\hat V^\star_{t+1})\, δ_t + α_{t+1}.
+\]</span></p>
+</div>
+</section>
+<section id="other-generalizations" class="level2" data-number="8.6">
+<h2 data-number="8.6" class="anchored" data-anchor-id="other-generalizations"><span class="header-section-number">8.6</span> Other generalizations</h2>
+<section id="stochastic-ais" class="level3" data-number="8.6.1">
+<h3 data-number="8.6.1" class="anchored" data-anchor-id="stochastic-ais"><span class="header-section-number">8.6.1</span> Stochastic AIS</h3>
+<p>So far the compression <span class="math inline">\(\hat σ_t \colon \ALPHABET H_t \to \ALPHABET Z_t\)</span> has been deterministic. In applications (especially when learning a discrete code by stochastic gradient methods) it is convenient to allow a <strong>randomized</strong> compression: given <span class="math inline">\(H_t = h_t\)</span>, one draws <span class="math inline">\(Z_t\)</span> from a kernel <span class="math inline">\(\hat σ_t(\,\cdot \mid h_t) \in Δ(\ALPHABET Z_t)\)</span>.</p>
+<p>This does not require a separate theory. Realize the randomization by an auxiliary primitive random variable <span class="math inline">\(θ_t\)</span> (independent of the system noise, with a known law), and write <span class="math display">\[
+  Z_t = \tilde σ_t(H_t, θ_t)
+\]</span> for a deterministic map <span class="math inline">\(\tilde σ_t\)</span>. Then <span class="math inline">\((H_t, θ_t)\)</span> is just a larger history, and <span class="math inline">\(\tilde σ_t\)</span> is an ordinary (deterministic) AIS compression of that history. The approximate cost <span class="math inline">\(\hat c_t\)</span> and kernel <span class="math inline">\(\hat P_t\)</span> are unchanged. All results of this lecture—mismatch bounds, <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a>, and <a href="#cor-ais-ipm" class="quarto-xref">Corollary&nbsp;<span>8.1</span></a>—apply verbatim to <span class="math inline">\(\tilde σ_t\)</span>, and taking the expectation over <span class="math inline">\(θ_t\)</span> recovers the statements for the original randomized compression.</p>
+</section>
+<section id="observation-compression" class="level3" data-number="8.6.2">
+<h3 data-number="8.6.2" class="anchored" data-anchor-id="observation-compression"><span class="header-section-number">8.6.2</span> Observation compression</h3>
+<p>In applications with high-dimensional sensors (e.g.&nbsp;video), one may first compress the observation alphabet by a fixed map <span class="math inline">\(q \colon \ALPHABET Y \to \hat{\ALPHABET Y}\)</span> and work with the compressed observations <span class="math inline">\(\hat Y_t = q(Y_t)\)</span>. The corresponding compressed histories are <span class="math display">\[
+  \hat H_t = (\hat Y_{1:t}, A_{1:t-1}).
+\]</span> An AIS for the compressed history process is exactly an AIS in the sense of this lecture, applied to the partially observed system whose observations are <span class="math inline">\(\hat Y_t\)</span> rather than <span class="math inline">\(Y_t\)</span>. The axioms (AP1)–(AP2), the mismatch operator, and the guarantees of <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a> / <a href="#cor-ais-ipm" class="quarto-xref">Corollary&nbsp;<span>8.1</span></a> carry over unchanged; only the underlying observation channel has been replaced by <span class="math inline">\(q\)</span>.</p>
+</section>
+<section id="action-compression" class="level3" data-number="8.6.3">
+<h3 data-number="8.6.3" class="anchored" data-anchor-id="action-compression"><span class="header-section-number">8.6.3</span> Action compression</h3>
+<p>Suppose the planner is restricted to a quantized action set <span class="math inline">\(\hat{\ALPHABET A} \subset \ALPHABET A\)</span>, with a quantizer <span class="math inline">\(ψ \colon \ALPHABET A \to \hat{\ALPHABET A}\)</span>. The abstract model is then defined only for actions in <span class="math inline">\(\hat{\ALPHABET A}\)</span>: <span class="math inline">\(\hat c_t \colon \ALPHABET Z_t \times \hat{\ALPHABET A} \to \reals\)</span> and <span class="math inline">\(\hat P_t \colon \ALPHABET Z_t \times \hat{\ALPHABET A} \to Δ(\ALPHABET Z_{t+1})\)</span>. The AIS axioms are restated by comparing the true action <span class="math inline">\(a_t\)</span> on the left-hand side to its quantized version <span class="math inline">\(ψ(a_t)\)</span> on the right-hand side.</p>
+<p><strong>(AP1) Approximate cost evaluation.</strong> For every policy <span class="math inline">\(π\)</span>, every history <span class="math inline">\(h_t\)</span>, and every action <span class="math inline">\(a_t \in \ALPHABET A\)</span>, <span class="math display">\[
+  \ABS{
+    \EXP^π[C_t \mid H_t = h_t,\, A_t = a_t]
+    - \hat c_t\bigl(\hat σ_t(h_t), ψ(a_t)\bigr)
+  }
+  \le ε_t,
+\]</span> where <span class="math inline">\(\hat c_t\bigl(\hat σ_t(h_t), ψ(a_t)\bigr)\)</span> does not depend on <span class="math inline">\(π\)</span>.</p>
+<p><strong>(AP2) Approximate self-prediction.</strong> Writing <span class="math display">\[
+  μ^π_t(\,\cdot\,)
+  = \PR^π\bigl(Z_{t+1} \in \cdot \bigm| H_t = h_t,\, A_t = a_t\bigr),
+  \quad
+  ν_t(\,\cdot\,)
+  = \hat P_t\bigl(\,\cdot \mid \hat σ_t(h_t), ψ(a_t)\bigr),
+\]</span> we have <span class="math inline">\(d_{\F}(μ^π_t, ν_t) \le δ_t\)</span>, where <span class="math inline">\(ν_t\)</span> does not depend on <span class="math inline">\(π\)</span>.</p>
+<p>The abstract DP is the usual Bellman recursion, but the <span class="math inline">\(\min\)</span> (and the greedy policy <span class="math inline">\(\hat π^\star_t\)</span>) run only over <span class="math inline">\(\hat{\ALPHABET A}\)</span>. Because <span class="math inline">\(\hat{\ALPHABET A} \subset \ALPHABET A\)</span>, a policy valued in <span class="math inline">\(\hat{\ALPHABET A}\)</span> can be executed directly in the true model. The mismatch / IPM argument is the same as before; the policy gap improves from <span class="math inline">\(2α_t\)</span> to <span class="math inline">\(α_t\)</span> in the perfectly observed special case with <span class="math inline">\(\hat σ_t = \mathrm{id}\)</span> and <span class="math inline">\((\hat c_t,\hat P_t) = (c_t,P_t)\)</span> restricted to <span class="math inline">\(\hat{\ALPHABET A}\)</span> <span class="citation" data-cites="Subramanian2022">(<a href="#ref-Subramanian2022" role="doc-biblioref">Subramanian et al. 2022</a> Cor.&nbsp;19)</span>.</p>
+</section>
+</section>
+<section id="beyond-sup-norm-bounds" class="level2" data-number="8.7">
+<h2 data-number="8.7" class="anchored" data-anchor-id="beyond-sup-norm-bounds"><span class="header-section-number">8.7</span> Beyond sup-norm bounds</h2>
+<p>The bound in <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a> depends on the history only through the scalar <span class="math display">\[
+  α_t = \sum_{\tau=t}^{T} \NORM{\hat\MISMATCH_τ \hat V^\star_{τ+1}},
+\]</span> and gives <span class="math inline">\(V^π_t - V^\star_t \le 2α_t\)</span>. This is the Lecture&nbsp;5 abstraction argument (<a href="state-abstraction.html#thm-model-error-hat-V-star-abstract" class="quarto-xref">Theorem&nbsp;<span>5.1</span></a>, <a href="state-abstraction.html#prp-value-error-abstract" class="quarto-xref">Proposition&nbsp;<span>5.2</span></a>) with <span class="math inline">\(\ALPHABET S_t = \ALPHABET H_t\)</span> and <span class="math inline">\(φ_t = \hat σ_t\)</span>. The IPM form <a href="#cor-ais-ipm" class="quarto-xref">Corollary&nbsp;<span>8.1</span></a> is what <span class="citation" data-cites="Subramanian2022">Subramanian et al. (<a href="#ref-Subramanian2022" role="doc-biblioref">2022</a>)</span> uses.</p>
+<p>In Lecture&nbsp;6 we obtained tighter bounds by working with the pointwise mismatch <span class="math inline">\(\hat\MISMATCH_t \hat V^\star_{t+1}\)</span> rather than its sup-norm. The signed envelopes <span class="math inline">\(α^\pm_t\)</span>, <span class="math inline">\(β^\pm_t\)</span> give lower and upper bounds on <span class="math inline">\(V^{\hat π^\star \circ \hat σ}_t - V^\star_t\)</span> (<a href="sample-path-bounds.html#thm-signed-sample-path" class="quarto-xref">Theorem&nbsp;<span>6.1</span></a> when the two models share a state space; <a href="sample-path-bounds.html#thm-signed-sample-path-abstract" class="quarto-xref">Theorem&nbsp;<span>6.3</span></a> when they are related by a lift <span class="math inline">\(φ\)</span>). Taking absolute values recovers a pathwise bound that is never worse than the uniform sum in <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a> (<a href="sample-path-bounds.html#thm-abs-sample-path-abstract" class="quarto-xref">Theorem&nbsp;<span>6.4</span></a>).</p>
+<section id="sample-path-bounds-for-ais" class="level3" data-number="8.7.1">
+<h3 data-number="8.7.1" class="anchored" data-anchor-id="sample-path-bounds-for-ais"><span class="header-section-number">8.7.1</span> Sample-path bounds for AIS</h3>
+<p>An AIS is a state abstraction of the history-based MDP, so the same results apply with <span class="math display">\[
+  \text{history-based MDP} \leftrightarrow \ALPHABET M,
+  \quad
+  \text{AIS abstract MDP} \leftrightarrow \widehat{\ALPHABET M},
+  \quad
+  \hat σ_t \leftrightarrow φ_t.
+\]</span> In particular, <a href="sample-path-bounds.html#lem-one-step-signed-abstract" class="quarto-xref">Lemma&nbsp;<span>6.3</span></a> through <a href="sample-path-bounds.html#thm-signed-sample-path-abstract" class="quarto-xref">Theorem&nbsp;<span>6.3</span></a> give pathwise envelopes for <span class="math display">\[
+  V^{\hat π^\star \circ \hat σ}_t(h_t) - V^\star_t(h_t)
+\]</span> (and the corresponding <span class="math inline">\(Q\)</span>-gaps). The one-step terms are the signed mismatches <span class="math inline">\(\hat\MISMATCH_t \hat V^\star_{t+1}\)</span>; the <span class="math inline">\((ε_t,δ_t)\)</span> bounds from <a href="#cor-ais-ipm" class="quarto-xref">Corollary&nbsp;<span>8.1</span></a> still control their size via <a href="state-abstraction.html#lem-IPM-bound-on-mismatch-abstract" class="quarto-xref">Lemma&nbsp;<span>5.3</span></a> (or the signed IPM corrections in Lecture&nbsp;6).</p>
+<p>The AIS axioms (AP1)–(AP2) do not change. What changes is how the mismatch is turned into a bound on <span class="math inline">\(V^π - V^\star\)</span>: pointwise rather than through the sup-norm. We do not restate the Lecture&nbsp;6 recursions here; <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a> remains the default statement for this lecture. A worked packet-drop channel with signed envelopes is in <a href="#prp-packet-drop-signed" class="quarto-xref">Proposition&nbsp;<span>8.2</span></a> below.</p>
+</section>
+</section>
+<section id="examples" class="level2" data-number="8.8">
+<h2 data-number="8.8" class="anchored" data-anchor-id="examples"><span class="header-section-number">8.8</span> Examples</h2>
+<section id="exact-information-state" class="level3" data-number="8.8.1">
+<h3 data-number="8.8.1" class="anchored" data-anchor-id="exact-information-state"><span class="header-section-number">8.8.1</span> Exact information state</h3>
+<p>If <span class="math inline">\(\{σ_t\}\)</span> is an exact information state and we take <span class="math inline">\(\hat σ_t = σ_t\)</span>, <span class="math inline">\(\hat c_t(z,a) = \EXP[C_t \mid Z_t = z, A_t = a]\)</span>, and <span class="math inline">\(\hat P_t\)</span> equal to the true conditional law of <span class="math inline">\(Z_{t+1}\)</span>, then <span class="math inline">\(\NORM{\hat\MISMATCH_t \hat V^\star_{t+1}} = 0\)</span> for all <span class="math inline">\(t\)</span>. <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a> collapses to <a href="pomdps.html#thm-info-state-dp" class="quarto-xref">Theorem&nbsp;<span>7.2</span></a>: <span class="math inline">\(α_t = 0\)</span> and the lifted greedy policy is optimal.</p>
+</section>
+<section id="mdp-state-abstraction" class="level3" data-number="8.8.2">
+<h3 data-number="8.8.2" class="anchored" data-anchor-id="mdp-state-abstraction"><span class="header-section-number">8.8.2</span> MDP state abstraction</h3>
+<p>Suppose <span class="math inline">\(Y_t = S_t\)</span> (perfect observation) with cost <span class="math inline">\(C_t = c_t(S_t, A_t)\)</span>, and let <span class="math inline">\(φ \colon \ALPHABET S \to \hat{\ALPHABET S}\)</span> be a state abstraction with approximate model <span class="math inline">\((\hat P_t, \hat c_t)\)</span> as in Lecture&nbsp;5. Set <span class="math display">\[
+  \hat σ_t(H_t) = φ(S_t).
+\]</span> Then <span class="math inline">\((\hat σ_t, \hat c_t, \hat P_t)\)</span> is an AIS of the history-based MDP, with the same <span class="math inline">\((ε_{φ,t}, \hat δ_{φ,t})\)</span> as in <a href="state-abstraction.html#def-model-distance-abstract" class="quarto-xref">Definition&nbsp;<span>5.1</span></a>. State quantization in Lecture&nbsp;5 is the special case where <span class="math inline">\(φ\)</span> maps each cell to a representative. Thus Lecture&nbsp;5 is AIS with identity compression of observations and nontrivial compression of the physical state.</p>
+</section>
+<section id="belief-compression-in-pomdps" class="level3" data-number="8.8.3">
+<h3 data-number="8.8.3" class="anchored" data-anchor-id="belief-compression-in-pomdps"><span class="header-section-number">8.8.3</span> Belief compression in POMDPs</h3>
+<p>Consider a standard POMDP. Quantize the beliefs using a quantization function <span class="math inline">\(φ\)</span> such that <span class="math inline">\(d_{\rm TV}(b, φ(b)) \le r\)</span> for all <span class="math inline">\(b \in Δ(\ALPHABET S)\)</span>. A concrete construction using type-lattice quantization is presented in <span class="citation" data-cites="Reznik2011">Reznik (<a href="#ref-Reznik2011" role="doc-biblioref">2011</a>)</span>.</p>
+<p>Take the approximate cost <span class="math display">\[
+  \hat c_t(\hat b, a) = \sum_{s \in \ALPHABET S} \hat b(s)\, c_t(s,a),
+\]</span> and approximate next-belief kernel equal to the Bayes update started from <span class="math inline">\(\hat b\)</span> (followed by re-quantization). It can be shown than for this model (see <span class="citation" data-cites="Subramanian2022">Subramanian et al. (<a href="#ref-Subramanian2022" role="doc-biblioref">2022</a>)</span>, Appendix C) <span class="math display">\[
+  ε_t \le r \SPAN(c_t),
+  \quad
+  δ_t \le 3r.
+\]</span> Then <a href="#cor-ais-ipm" class="quarto-xref">Corollary&nbsp;<span>8.1</span></a> gives an approximation bound for using the quantized beliefs.</p>
+</section>
+<section id="observations-over-a-packet-drop-channel" class="level3" data-number="8.8.4">
+<h3 data-number="8.8.4" class="anchored" data-anchor-id="observations-over-a-packet-drop-channel"><span class="header-section-number">8.8.4</span> Observations over a packet-drop channel</h3>
+<p><strong>Model and AIS generator.</strong> Consider a finite-horizon POMDP in which the controller observes the state through an i.i.d.&nbsp;packet-drop channel: with probability <span class="math inline">\(p \in [0,1]\)</span>, independently of the past, <span class="math display">\[
+  Y_t
+  = \begin{cases}
+    \mathfrak{E}, &amp; \text{packet drop}, \\
+    S_t, &amp; \text{otherwise},
+  \end{cases}
+\]</span> where <span class="math inline">\(\mathfrak{E}\)</span> is an erasure symbol. The observation channel itself is uncontrolled (no action enters the law of <span class="math inline">\(Y_t\)</span> given <span class="math inline">\(S_t\)</span>). The per-step cost is the conditional expectation <span class="math inline">\(c_t(h_t,a_t) = \int k_t(s,a_t)\, P(ds \mid h_t)\)</span> of a bounded primitive state-action cost <span class="math inline">\(0 \le k_t(s,a) \le k_{\max}\)</span>.</p>
+<p>Take the AIS generator with <span class="math inline">\(\ALPHABET Z_t = \ALPHABET S\)</span>, <span class="math display">\[
+  \hat σ_t(y_{1:t}, a_{1:t-1})
+  = \begin{cases}
+    y_t, &amp; y_t \ne \mathfrak{E}, \\
+    s_{\mathrm{nom}}, &amp; y_t = \mathfrak{E},
+  \end{cases}
+\]</span> for a fixed nominal state <span class="math inline">\(s_{\mathrm{nom}} \in \ALPHABET S\)</span>, approximate cost <span class="math inline">\(\hat c_t(s,a) = k_t(s,a)\)</span>, and approximate transition <span class="math inline">\(\hat P_t = P_{S,t}\)</span> equal to the true state kernel. Write <span class="math inline">\(d_t(h_t) \coloneqq \mathbf{1}_{\{y_t = \mathfrak{E}\}}\)</span> for the drop indicator.</p>
+<p>This is an abstract-model situation: the history-based MDP is <span class="math inline">\(\ALPHABET M\)</span>, the AIS MDP on <span class="math inline">\(\ALPHABET S\)</span> is <span class="math inline">\(\widehat{\ALPHABET M}\)</span>, and <span class="math inline">\(φ_t = \hat σ_t\)</span>. On a non-drop, <span class="math inline">\(\hat σ_t(h_t) = S_t\)</span> and the immediate cost matches. On a drop, <span class="math inline">\(\hat σ_t(h_t) = s_{\mathrm{nom}}\)</span> and <span class="math inline">\(\hat c_t(s_{\mathrm{nom}},a) = k_t(s_{\mathrm{nom}},a)\)</span>, while the true conditional cost still lies in <span class="math inline">\([0,k_{\max}]\)</span>, so <span class="math display">\[
+  -k_t(s_{\mathrm{nom}},a)
+  \le c_t(h_t,a) - \hat c_t(s_{\mathrm{nom}},a)
+  \le k_{\max} - k_t(s_{\mathrm{nom}},a).
+\]</span> We choose total variation as the IPM as in the properties lecture (<span class="math inline">\(d_{\mathrm{TV}} = \NORM{\,\cdot\,}_1\)</span>, <span class="math inline">\(ρ_{\F}(v) = \tfrac12 \SPAN(v)\)</span>). Take the (conservative) transition discrepancy <span class="math inline">\(\hat δ_t = 2\, d_t\)</span>, which yields an IPM correction <span class="math inline">\(\hat δ_t\, ρ_{\F}(\hat V^\star_{t+1}) = \SPAN(\hat V^\star_{t+1})\, d_t\)</span> on each side; non-drop transition error of order <span class="math inline">\(p\)</span> is absorbed into the backward recursion through the next drop indicator.</p>
+<p><strong>Signed envelopes.</strong> Apply the computable upper bounds from Lecture&nbsp;6 with the action-dependent cost mismatches <span class="math display">\[\begin{align*}
+  \hat ε^+_t(h_t,a)
+  &amp;= \bigl(k_{\max} - k_t(s_{\mathrm{nom}},a)\bigr)\, d_t(h_t),
+  \qquad
+  \hat ε^-_t(h_t,a) = -k_t(s_{\mathrm{nom}},a)\, d_t(h_t),
+\end{align*}\]</span> and <span class="math display">\[\begin{align*}
+  \hat δ_t\, ρ_{\F}(\hat V^\star_{t+1})
+  &amp;= ω_t\, d_t,
+  \qquad
+  ω_t \coloneqq \SPAN(\hat V^\star_{t+1}),
+\end{align*}\]</span> with <span class="math inline">\(ω_T \coloneqq 0\)</span>. For every <span class="math inline">\(a\)</span>, the width <span class="math inline">\(\hat ε^+_t(h_t,a) - \hat ε^-_t(h_t,a) = k_{\max}\, d_t(h_t)\)</span> is action-independent. To obtain history envelopes that depend on <span class="math inline">\(h_t\)</span> only through <span class="math inline">\(d_t\)</span>, replace the <span class="math inline">\(a\)</span>-dependent bounds by the worst-case (over <span class="math inline">\(a\)</span>) upper bounds <span class="math display">\[
+  \underline{k}_t \coloneqq \min_{a \in \ALPHABET A} k_t(s_{\mathrm{nom}},a),
+  \qquad
+  \overline{k}_t \coloneqq \max_{a \in \ALPHABET A} k_t(s_{\mathrm{nom}},a),
+\]</span> so that <span class="math display">\[
+  \hat ε^+_t
+  = \bigl(k_{\max} - \underline{k}_t\bigr)\, d_t,
+  \qquad
+  \hat ε^-_t
+  = -\overline{k}_t\, d_t
+\]</span> dominate the pointwise formulas for every <span class="math inline">\(a\)</span>. Because the drop channel is uncontrolled, once <span class="math inline">\(α^\pm_{t+1}\)</span> depend on the history only through <span class="math inline">\(d_{t+1}\)</span>, the conditional expectation <span class="math inline">\(\DYNAMICS_t α^\pm_{t+1}\)</span> is action-independent. The concrete construction after <a href="sample-path-bounds.html#thm-signed-sample-path-abstract" class="quarto-xref">Theorem&nbsp;<span>6.3</span></a> therefore collapses to <span class="math display">\[\begin{align*}
+  α^+_T
+  &amp;= \bigl(k_{\max} - \underline{k}_T\bigr)\, d_T,
+  \qquad
+  α^-_T
+  = -\overline{k}_T\, d_T,
+\end{align*}\]</span> and for <span class="math inline">\(t &lt; T\)</span>, <span class="math display">\[\begin{align*}
+  α^+_t
+  &amp;= \bigl(k_{\max} - \underline{k}_t + ω_t\bigr)\, d_t
+  + \int α^+_{t+1}(h_t, a_t, y_{t+1})\, P(dy_{t+1} \mid h_t, a_t),
+  \\
+  α^-_t
+  &amp;= \bigl(-\overline{k}_t - ω_t\bigr)\, d_t
+  + \int α^-_{t+1}(h_t, a_t, y_{t+1})\, P(dy_{t+1} \mid h_t, a_t).
+\end{align*}\]</span></p>
+<div id="prp-packet-drop-signed" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 8.2 (Packet-drop signed sample-path bound)</strong></span> The envelopes above satisfy the hypotheses of <a href="sample-path-bounds.html#thm-signed-sample-path-abstract" class="quarto-xref">Theorem&nbsp;<span>6.3</span></a>. Consequently the lifted AIS policy <span class="math inline">\(π_t = \hat π^\star_t \circ \hat σ_t\)</span> obeys, for every <span class="math inline">\(t\)</span> and every history <span class="math inline">\(h_t\)</span>, <span class="math display">\[
+  V^π_t(h_t) - V^\star_t(h_t)
+  \le α^+_t(h_t) - α^-_t(h_t).
+\]</span> Moreover <span class="math inline">\(α^\pm_t\)</span> admit the closed forms <span class="math display">\[
+  α^+_t = ξ^+_t + \bigl(k_{\max} - \underline{k}_t + ω_t\bigr)\, d_t,
+  \qquad
+  α^-_t = ξ^-_t + \bigl(-\overline{k}_t - ω_t\bigr)\, d_t,
+\]</span> where <span class="math inline">\(ξ^\pm_{T} = 0\)</span>, <span class="math inline">\(ξ^+_{T-1} = p(k_{\max} - \underline{k}_T)\)</span>, <span class="math inline">\(ξ^-_{T-1} = -p\,\overline{k}_T\)</span>, and for <span class="math inline">\(t &lt; T-1\)</span>, <span class="math display">\[\begin{align*}
+  ξ^+_t
+  &amp;= ξ^+_{t+1} + p\bigl(k_{\max} - \underline{k}_{t+1} + ω_{t+1}\bigr),
+  \\
+  ξ^-_t
+  &amp;= ξ^-_{t+1} + p\bigl(-\overline{k}_{t+1} - ω_{t+1}\bigr).
+\end{align*}\]</span> In particular the gap <span class="math inline">\(\varphi_t \coloneqq α^+_t - α^-_t\)</span> is <span class="math display">\[
+  \varphi_t
+  = ζ_t + \bigl(k_{\max} - \underline{k}_t + \overline{k}_t + 2ω_t\bigr)\, d_t,
+\]</span> with <span class="math inline">\(ζ_T = 0\)</span>, <span class="math inline">\(ζ_{T-1} = p\bigl(k_{\max} - \underline{k}_T + \overline{k}_T\bigr)\)</span>, and for <span class="math inline">\(t &lt; T-1\)</span>, <span class="math display">\[
+  ζ_t = ζ_{t+1} + p\bigl(k_{\max} - \underline{k}_{t+1} + \overline{k}_{t+1} + 2ω_{t+1}\bigr).
+\]</span> When <span class="math inline">\(k_t(s_{\mathrm{nom}},\,\cdot\,)\)</span> does not depend on <span class="math inline">\(a\)</span>, one has <span class="math inline">\(\underline{k}_t = \overline{k}_t\)</span> and the drop coefficient in <span class="math inline">\(\varphi_t\)</span> simplifies to <span class="math inline">\(k_{\max} + 2ω_t\)</span>.</p>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Proof sketch
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>On a drop, the pointwise cost bounds and the TV correction give, for every <span class="math inline">\(a\)</span>, <span class="math display">\[
+  -k_t(s_{\mathrm{nom}},a) - ω_t
+  \le \bigl[\hat\MISMATCH_t \hat V^\star_{t+1}\bigr](h_t,a)
+  \le k_{\max} - k_t(s_{\mathrm{nom}},a) + ω_t.
+\]</span> The worst-case upper bounds <span class="math inline">\(\hat ε^\pm_t\)</span> above dominate these for all <span class="math inline">\(a\)</span>, and yield the action-free one-step interval <span class="math inline">\(\bigl[-\overline{k}_t - ω_t,\, k_{\max} - \underline{k}_t + ω_t\bigr]\)</span> on a drop. On a non-drop the same upper bounds are zero (under the discrepancy choice above). Substituting into the concrete <span class="math inline">\(α^\pm\)</span> construction of <a href="sample-path-bounds.html#thm-signed-sample-path-abstract" class="quarto-xref">Theorem&nbsp;<span>6.3</span></a> yields the displayed recursion. The ansatz that <span class="math inline">\(α^\pm_t\)</span> depends on <span class="math inline">\(h_t\)</span> only through <span class="math inline">\(d_t\)</span> is preserved backward because <span class="math display">\[
+  \int α^\pm_{t+1}\, P(dy_{t+1} \mid h_t, a_t)
+  = ξ^\pm_{t+1} + p \cdot (\text{drop coefficient at } t+1),
+\]</span> independently of <span class="math inline">\((h_t,a_t)\)</span> and of whether <span class="math inline">\(d_t = 1\)</span>. The constants <span class="math inline">\(ξ^\pm_t\)</span> are exactly those drop contributions. Subtracting the two envelopes produces <span class="math inline">\(\varphi_t = ζ_t + (k_{\max} - \underline{k}_t + \overline{k}_t + 2ω_t)\, d_t\)</span> with the claimed recursion for <span class="math inline">\(ζ_t\)</span>. <a href="sample-path-bounds.html#thm-signed-sample-path-abstract" class="quarto-xref">Theorem&nbsp;<span>6.3</span></a> then gives <span class="math inline">\(V^π_t - V^\star_t \le \varphi_t\)</span>.</p>
+</div>
+</div>
+</div>
+<p>Averaging at time <span class="math inline">\(1\)</span> over <span class="math inline">\(H_1 = Y_1\)</span> produces the performance bound <span class="math display">\[
+  \EXP\bigl[V^π_1(H_1)\bigr] - \EXP\bigl[V^\star_1(H_1)\bigr]
+  \le ζ_1 + p\bigl(k_{\max} - \underline{k}_1 + \overline{k}_1 + 2\,\SPAN(\hat V^\star_2)\bigr).
+\]</span> Both this expectation and the pointwise gap <span class="math inline">\(\varphi_t\)</span> vanish as <span class="math inline">\(p \to 0\)</span>.</p>
+<p>The classical uniform (history-independent) AIS bound of <a href="#thm-ais-approx-dp" class="quarto-xref">Theorem&nbsp;<span>8.1</span></a> yields a constant <span class="math inline">\(\bar α_t\)</span> that does <strong>not</strong> tend to <span class="math inline">\(0\)</span> as <span class="math inline">\(p \to 0\)</span>, since it must cover the worst-case drop at every time. The sample-path envelopes repair that defect.</p>
+</section>
+</section>
+<section id="notes" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="notes">Notes</h2>
+<p>In this lecture, we follow <span class="citation" data-cites="Subramanian2022">Subramanian et al. (<a href="#ref-Subramanian2022" role="doc-biblioref">2022</a>)</span> for finite-horizon AIS. Belief compression and <span class="math inline">\(ε\)</span>-sufficient statistics are as in §3.3, building on <span class="citation" data-cites="FrancoisLavet2019">François-Lavet et al. (<a href="#ref-FrancoisLavet2019" role="doc-biblioref">2019</a>)</span> and type-lattice quantization <span class="citation" data-cites="Reznik2011">Reznik (<a href="#ref-Reznik2011" role="doc-biblioref">2011</a>)</span>. Sample-path refinements of the AIS value / policy gaps follow by specializing Lecture&nbsp;6 (Take&nbsp;4) to the history-based MDP with <span class="math inline">\(φ_t = \hat σ_t\)</span> <span class="citation" data-cites="Bozkurt2026">(<a href="#ref-Bozkurt2026" role="doc-biblioref">Bozkurt et al. 2026</a>)</span>.</p>
+</section>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-Bozkurt2026" class="csl-entry" role="listitem">
+<span class="smallcaps">Bozkurt, B., Mahajan, A., Nayyar, A., and Ouyang, Y.</span> 2026. Sample path dependent bounds for approximate information state.
+</div>
+<div id="ref-FrancoisLavet2019" class="csl-entry" role="listitem">
+<span class="smallcaps">François-Lavet, V., Bengio, Y., Precup, D., and Pineau, J.</span> 2019. Combined reinforcement learning via abstract representations. <em>Proceedings of the <span>AAAI</span> conference on artificial intelligence</em>, 3582–3589. DOI: <a href="https://doi.org/10.1609/aaai.v33i01.33013582">10.1609/aaai.v33i01.33013582</a>.
+</div>
+<div id="ref-Reznik2011" class="csl-entry" role="listitem">
+<span class="smallcaps">Reznik, Y.A.</span> 2011. An algorithm for quantization of discrete probability distributions. <em>2011 data compression conference</em>, <span>IEEE</span>, 333–342. DOI: <a href="https://doi.org/10.1109/dcc.2011.40">10.1109/dcc.2011.40</a>.
+</div>
+<div id="ref-Subramanian2022" class="csl-entry" role="listitem">
+<span class="smallcaps">Subramanian, J., Sinha, A., Seraj, R., and Mahajan, A.</span> 2022. Approximate information state for approximate planning and reinforcement learning in partially observed systems. <em>Journal of Machine Learning Research</em> <em>23</em>, 12, 1–83. Available at: <a href="http://jmlr.org/papers/v23/20-1165.html">http://jmlr.org/papers/v23/20-1165.html</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/adityam\.github\.io\/AIS-course\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../lectures/pomdps.html" class="pagination-link" aria-label="POMDPs and information states">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">POMDPs and information states</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../lectures/certainty-equivalence.html" class="pagination-link" aria-label="Certainty equivalence in POMDPs">
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Certainty equivalence in POMDPs</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
